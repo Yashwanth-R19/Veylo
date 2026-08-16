@@ -6,3 +6,6 @@ artifacts/
 data/
 *.log
 typechain-types/
+docs/
+VEYLO_BUILD_PLAN_REVISED.md
+CLAUDE.md

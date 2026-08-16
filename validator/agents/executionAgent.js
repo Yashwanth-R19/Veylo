@@ -82,8 +82,10 @@ async function executeTests(repoPath, testSuite) {
     console.log("[ExecutionAgent] Running tests in Docker sandbox (hardened)...");
     return runInDocker(repoPath, testCommand, language);
   } else {
-    console.log("[ExecutionAgent] Docker unavailable — running tests locally...");
-    return runLocally(repoPath, testCommand, language);
+    throw new Error(
+      "[ExecutionAgent] Docker unavailable. Host execution of submitted code has been permanently removed for security (see docs/CURRENT_STATE.md §3). " +
+      "This pipeline is deprecated — use validator/core/sandbox.js, which never falls back to host execution."
+    );
   }
 }
 
@@ -163,102 +165,6 @@ function runInDocker(repoPath, testCommand, language) {
       try { child.kill("SIGKILL"); } catch { }
     }, timeoutMs + 5000);
   });
-}
-
-/**
- * Run tests directly on the host (local mode, used when Docker is unavailable).
- * Installs deps and runs the test command in the repo directory.
- */
-function runLocally(repoPath, testCommand, language) {
-  return new Promise((resolve) => {
-    // Check if repo has any source files at all
-    if (!fs.existsSync(repoPath) || fs.readdirSync(repoPath).length === 0) {
-      console.log("[ExecutionAgent] Empty repo — returning zero score");
-      return resolve({
-        executionScore: 0,
-        testsPassed: 0,
-        testsTotal: 1,
-        runtimeOutput: "Repository is empty — no tests to run.",
-        timedOut: false,
-        exitCode: 1,
-      });
-    }
-
-    // Try installing deps first, then run tests
-    const installCmd = language === "python"
-      ? "pip install -r requirements.txt --quiet 2>/dev/null || true"
-      : "npm install --silent 2>/dev/null || true";
-
-    const fullCmd = `${installCmd} && ${testCommand}`;
-    const timeoutMs = (dockerConfig.timeout || 30) * 1000;
-
-    exec(
-      fullCmd,
-      { cwd: repoPath, timeout: timeoutMs, maxBuffer: dockerConfig.maxOutputBytes || 1024 * 1024, shell: true },
-      (error, stdout, stderr) => {
-        const output = (stdout || "") + "\n" + (stderr || "");
-        const { passed, total } = parseTestOutput(output, language);
-
-        // If we couldn't parse any test results, check if there are test files
-        let executionScore;
-        if (total > 0) {
-          executionScore = Math.round((passed / total) * 100);
-        } else {
-          // No test runner output — check if test files exist
-          const hasTests = checkForTestFiles(repoPath, language);
-          executionScore = hasTests ? 25 : 0; // Partial credit if test files exist but didn't run
-        }
-
-        console.log(`[ExecutionAgent] Local execution: ${passed}/${total} tests passed, score=${executionScore}`);
-
-        resolve({
-          executionScore,
-          testsPassed: passed,
-          testsTotal: Math.max(total, 1),
-          runtimeOutput: output.slice(0, 5000),
-          timedOut: error?.killed || false,
-          exitCode: error?.code || 0,
-        });
-      }
-    );
-  });
-}
-
-/**
- * Check if the repo contains test files.
- */
-function checkForTestFiles(repoPath, language) {
-  try {
-    const files = getAllFiles(repoPath);
-    if (language === "python") {
-      return files.some(f => f.includes("test_") || f.includes("_test.py") || f.endsWith("tests.py"));
-    }
-    return files.some(f => f.includes(".test.") || f.includes(".spec.") || f.includes("__tests__"));
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Recursively get all files in a directory (max depth 3).
- */
-function getAllFiles(dir, depth = 0) {
-  if (depth > 3) return [];
-  const files = [];
-  try {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "__pycache__") continue;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        files.push(...getAllFiles(full, depth + 1));
-      } else {
-        files.push(entry.name);
-      }
-    }
-  } catch {
-    // Permission error or similar
-  }
-  return files;
 }
 
 /**

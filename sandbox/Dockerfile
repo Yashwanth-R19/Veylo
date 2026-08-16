@@ -6,28 +6,27 @@
 # Security: no network, memory limits, read-only root, timeout enforced by host.
 # Additional host-side flags: --pids-limit, --cap-drop=ALL, --security-opt
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-FROM python:3.11-slim AS python-base
-RUN pip install --no-cache-dir pytest flake8 pylint requests flask fastapi uvicorn
-
 FROM node:18-slim AS node-base
 RUN npm install -g --no-cache jest mocha eslint typescript ts-node
 
-# Final combined image
-FROM ubuntu:22.04
+# Final image — built on python:3.11-slim (Debian 13/trixie, glibc 2.38+).
+# Node's binaries are copied in from node:18-slim (Debian 12/bookworm, glibc
+# 2.36), which is ABI-safe because glibc is backward compatible: a binary
+# built against an older glibc runs fine on a newer one. The reverse — this
+# image previously copied Python (trixie, glibc 2.38) into an ubuntu:22.04
+# final stage (glibc 2.35) — is not safe and was the cause of
+# "version `GLIBC_2.38' not found" at runtime.
+FROM python:3.11-slim
 
-# Install both runtimes
+RUN pip install --no-cache-dir pytest flake8 pylint requests flask fastapi uvicorn
+
+# Install git (Node itself comes from the node-base stage below)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv \
-    nodejs npm \
     git \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy pre-installed packages from builder stages
-COPY --from=python-base /usr/local/lib/python3.11 /usr/local/lib/python3.11
-COPY --from=python-base /usr/local/bin /usr/local/bin
+# Copy pre-installed global node packages from builder stage
 COPY --from=node-base /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=node-base /usr/local/bin /usr/local/bin
 
