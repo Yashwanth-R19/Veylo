@@ -1,0 +1,43 @@
+{
+  "repoUrl": "corpus/py-06-defect-lint-violations/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "main.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "main.py"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "GET /health returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/health",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "no lint errors",
+      "check": {
+        "kind": "lint_clean",
+        "maxErrors": 0
+      }
+    }
+  ]
+}

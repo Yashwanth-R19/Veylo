@@ -1,0 +1,43 @@
+{
+  "repoUrl": "corpus/py-05-defect-missing-file/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "main.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "main.py"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "config.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "config.py"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "GET /health returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/health",
+        "expectStatus": 200
+      }
+    }
+  ]
+}

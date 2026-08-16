@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "index": 0,
+      "status": "PASS"
+    },
+    {
+      "index": 1,
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "index": 2,
+      "status": "PASS"
+    },
+    {
+      "index": 3,
+      "status": "FAIL"
+    }
+  ]
+}

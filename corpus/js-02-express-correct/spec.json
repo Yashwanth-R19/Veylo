@@ -1,0 +1,43 @@
+{
+  "repoUrl": "corpus/js-02-express-correct/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "server.js exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "server.js"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "GET /ping returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/ping",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "package.json exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "package.json"
+      }
+    }
+  ]
+}

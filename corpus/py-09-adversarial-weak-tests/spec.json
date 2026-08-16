@@ -1,0 +1,43 @@
+{
+  "repoUrl": "corpus/py-09-adversarial-weak-tests/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "main.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "main.py"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes: verifies /calculate computes the correct sum",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "GET /calculate/2/3 returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/calculate/2/3",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "no lint errors",
+      "check": {
+        "kind": "lint_clean",
+        "maxErrors": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "repoUrl": "corpus/js-06-defect-unhashed-password/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "server.js exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "server.js"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes: passwords stored hashed, never in plaintext",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "POST /register returns 201",
+      "check": {
+        "kind": "http_route",
+        "method": "POST",
+        "route": "/register",
+        "expectStatus": 201
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "package.json exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "package.json"
+      }
+    }
+  ]
+}
