@@ -1,9 +1,7 @@
 /**
  * server.js
  * ──────────
- * Main entry point for the blockchain-escrow backend.
- *
- * Starts the Express API server and initializes services.
+ * Main entry point for the Veylo backend.
  *
  * Usage:
  *   node server.js
@@ -13,12 +11,13 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const escrowService = require("./backend/services/escrowService");
-const modelClient = require("./validator/ai/modelClient");
+
+const outbox = require("./backend/services/outbox");
+const driftDetector = require("./backend/services/driftDetector");
+const chainService = require("./backend/services/chainService");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 
 // ─── Middleware ────────────────────────────────────────────
 app.use(cors({
@@ -36,21 +35,35 @@ app.use((req, res, next) => {
 
 // ─── Routes ───────────────────────────────────────────────
 app.use("/api/auth", require("./backend/routes/auth"));
-app.use("/api/jobs", require("./backend/routes/jobs"));
-app.use("/api/validation", require("./backend/routes/validation"));
-app.use("/api/reputation", require("./backend/routes/reputation"));
+app.use("/api/agreements", require("./backend/routes/agreements"));
 
 // ─── Health Check ─────────────────────────────────────────
+// Reports genuine per-dependency status, including total on-chain drift.
+// Never returns a blanket "ok" for a subsystem that isn't actually working.
 app.get("/api/health", async (req, res) => {
-  const ollamaHealth = await modelClient.healthCheck();
+  let chainReachable = true;
+  let blockNumber = null;
+  try {
+    blockNumber = await chainService.getCurrentBlock();
+  } catch {
+    chainReachable = false;
+  }
+
+  const drift = driftDetector.getLastResult();
+
   res.json({
-    status: "ok",
+    status: chainReachable ? "ok" : "degraded",
     timestamp: new Date().toISOString(),
     services: {
       api: true,
-      blockchain: escrowService.isAvailable(),
-      ollama: ollamaHealth.available,
-      ollamaModel: ollamaHealth.hasModel || false,
+      chain: { reachable: chainReachable, blockNumber, network: "amoy", chainId: 80002 },
+    },
+    drift: {
+      checked: drift.checked,
+      driftedCount: drift.drifted,
+      driftedAgreementIds: drift.driftedIds,
+      unreachableDuringLastCheck: drift.unreachable,
+      lastRunAt: drift.lastRunAt,
     },
   });
 });
@@ -58,20 +71,18 @@ app.get("/api/health", async (req, res) => {
 // ─── API Overview ─────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({
-    name: "Blockchain Escrow Platform",
-    version: "0.1.0",
+    name: "Veylo",
+    version: "0.2.0",
     endpoints: {
-      "POST /api/jobs": "Create a new job",
-      "GET  /api/jobs": "List all jobs",
-      "GET  /api/jobs/:id": "Get job details",
-      "PUT  /api/jobs/:id/accept": "Accept a job (freelancer)",
-      "POST /api/jobs/:id/submit": "Submit work for a job",
-      "POST /api/validation/run": "Trigger validation pipeline",
-      "GET  /api/validation/:jobId": "Get validation report",
-      "POST /api/validation/generate-tests": "Generate test suite from description",
-      "POST /api/validation/check-ambiguity": "Check spec for ambiguities",
-      "GET  /api/reputation/:address": "Get reputation for address",
-      "GET  /api/health": "System health check",
+      "POST /api/agreements": "Create an agreement (needs clientSig)",
+      "POST /api/agreements/:id/accept": "Worker counter-signs",
+      "POST /api/agreements/:id/evidence": "Submit repo + commit",
+      "POST /api/agreements/:id/decide": "Client decision from NEEDS_REVIEW",
+      "POST /api/agreements/:id/dispute": "Raise a dispute",
+      "POST /api/agreements/:id/finalize": "Finalize",
+      "GET  /api/agreements": "List agreements",
+      "GET  /api/agreements/:id": "Get an agreement (DB + on-chain + inSync)",
+      "GET  /api/health": "System health check, including chain drift",
     },
   });
 });
@@ -79,26 +90,20 @@ app.get("/", (req, res) => {
 // ─── Startup ──────────────────────────────────────────────
 async function start() {
   console.log("╔══════════════════════════════════════════════╗");
-  console.log("║   Blockchain Escrow Platform — Backend API   ║");
+  console.log("║   Veylo — Backend API                         ║");
   console.log("╚══════════════════════════════════════════════╝\n");
 
-  // Initialize blockchain connection (non-fatal)
-  await escrowService.initialize();
+  // Every incomplete outbox row from a previous run is resumed before the
+  // worker starts polling — see backend/services/outbox.js.
+  await outbox.startWorker();
+  console.log("[Startup] Outbox worker running.");
 
-  // Check Ollama status
-  const ollamaHealth = await modelClient.healthCheck();
-  if (ollamaHealth.available) {
-    console.log(`[Startup] Ollama available. Model ${ollamaHealth.model}: ${ollamaHealth.hasModel ? "ready" : "needs pull"}`);
-    if (!ollamaHealth.hasModel) {
-      console.log(`[Startup] Run: ollama pull ${ollamaHealth.model}`);
-    }
-  } else {
-    console.log("[Startup] Ollama not available — semantic analysis will use fallback scores");
-  }
+  driftDetector.startScheduledCheck();
+  console.log("[Startup] Drift detector running.");
 
   app.listen(PORT, () => {
     console.log(`\n[Server] API running at http://localhost:${PORT}`);
-    console.log("[Server] Try: GET http://localhost:${PORT}/health\n");
+    console.log(`[Server] Try: GET http://localhost:${PORT}/api/health\n`);
   });
 }
 

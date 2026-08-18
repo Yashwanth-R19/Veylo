@@ -21,6 +21,13 @@ const config: HardhatUserConfig = {
       url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
     },
+    // Polygon Amoy testnet. Polygon's own public RPC (rpc-amoy.polygon.technology)
+    // was deprecated 17 July 2026 — must use an Alchemy endpoint.
+    amoy: {
+      url: process.env.ALCHEMY_AMOY_URL || "",
+      chainId: 80002,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
   },
   paths: {
     sources: "./contracts",

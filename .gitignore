@@ -9,3 +9,5 @@ typechain-types/
 docs/
 VEYLO_BUILD_PLAN_REVISED.md
 CLAUDE.md
+prisma/dev.db
+prisma/dev.db-journal

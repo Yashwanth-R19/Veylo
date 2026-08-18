@@ -3,117 +3,166 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
-  name          String?
-  role          String   @default("client")
-
   passwordHash  String?
+  name          String?
+  walletAddress String?  @unique
 
+  // Not in the plan's §7 field list — kept because backend/routes/auth.js
+  // (which the plan's Phase 2 "Reused" section says stays unchanged) reads
+  // and writes all three. Added back per explicit user decision rather than
+  // breaking auth.js or silently trimming its features.
+  role          String   @default("client")
   oauthProvider String?
   oauthId       String?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  agreementsAsClient Agreement[] @relation("AgreementClient")
+  agreementsAsWorker Agreement[] @relation("AgreementWorker")
+  disputesRaised     Dispute[]   @relation("DisputeRaisedBy")
 }
 
-model Job {
-  id                 Int      @id @default(autoincrement())
-  title              String?
-  description        String
-  clientAddress      String
-  freelancerAddress  String?
-  fundedAt           DateTime?
-  techStack          String?
-  expectedDeliverable String?
+model Agreement {
+  id               Int      @id @default(autoincrement())
+  onChainId        Int?     @unique
 
-  requirementsHash   String
-  testSuiteHash      String?
-  testSuiteJson      Json?
+  clientId         Int
+  client           User     @relation("AgreementClient", fields: [clientId], references: [id])
+  workerId         Int
+  worker           User     @relation("AgreementWorker", fields: [workerId], references: [id])
 
-  state              String   @default("CREATED")
-  outcome            String   @default("NONE")
+  title            String?
+  description      String?
 
-  paymentAmountINR   String?
+  amountMinor      BigInt
+  currency         String
 
-  repoUrl            String?
-  submissionHash     String?
+  criteriaHash     String
+  criteriaJson     String // JSON-serialized: SQLite connector has no native Json type
 
-  commitHash         String?      // ADD
-  submissionNotes    String?      // ADD
+  clientSignature  String?
+  workerSignature  String?
 
-  deadline           DateTime?
+  deadline         DateTime
+  reviewWindowEnds DateTime?
 
-  createdAt          DateTime @default(now())
-  submittedAt        DateTime?
-  validatedAt        DateTime?
-  closedAt           DateTime?
+  status           String   @default("DRAFT")
+  outcome          String   @default("NONE")
 
-  createTxHash       String?
-  fundTxHash         String?
-  validateTxHash     String?
+  createdAt        DateTime @default(now())
 
-  validationReports  ValidationReport[]
+  criteria         Criterion[]
+  evidence         Evidence[]
+  verifications    Verification[]
+  disputes         Dispute[]
+  settlement       Settlement?
+  outboxEntries    Outbox[]
 }
 
-model ValidationReport {
-  id                 Int @id @default(autoincrement())
+model Criterion {
+  id          Int       @id @default(autoincrement())
+  agreementId Int
+  agreement   Agreement @relation(fields: [agreementId], references: [id])
 
-  jobId              Int @unique
-  job                Job @relation(fields: [jobId], references: [id])
+  index       Int
+  method      String
+  text        String
+  checkSpec   String? // JSON-serialized: SQLite connector has no native Json type
 
-  overallScore       Int
-  verdict            String
-
-  executionScore     Int?
-  testsPassed        Int?
-  testsTotal         Int?
-
-  structureScore     Int?
-  lintScore          Int?
-  semanticScore      Int?
-
-  semanticReasoning  String?
-
-  reportHash         String?
-  reportJson         Json?
-
-  createdAt          DateTime @default(now())
+  @@unique([agreementId, index])
 }
 
-model Reputation {
-  address            String @id
-  totalJobs          Int @default(0)
-  totalScore         Int @default(0)
-  averageScore       Float @default(0)
+model Evidence {
+  id           Int       @id @default(autoincrement())
+  agreementId  Int
+  agreement    Agreement @relation(fields: [agreementId], references: [id])
 
-  successfulJobs     Int @default(0)
-  disputedJobs       Int @default(0)
-  failedJobs         Int @default(0)
+  repoUrl      String
+  commitHash   String
+  evidenceHash String
 
-  updatedAt          DateTime @updatedAt
+  submittedAt  DateTime  @default(now())
 }
 
-model Badge {
-  id        Int @id @default(autoincrement())
-  address   String
-  badgeName String
-  tokenId   Int?
+model Verification {
+  id                Int       @id @default(autoincrement())
+  agreementId       Int
+  agreement         Agreement @relation(fields: [agreementId], references: [id])
 
-  awardedAt DateTime @default(now())
+  resultsHash       String?
+  deterministicHash String?
+  resultsJson       String? // JSON-serialized: SQLite connector has no native Json type
 
-  @@unique([address, badgeName])
+  outcome           String?
+  engineVersion     String?
+
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  error             String?
 }
 
-model SlashRecord {
-  address              String @id
-  consecutiveFailures  Int @default(0)
-  totalSlashes         Int @default(0)
-  cooldownUntil        DateTime?
-  isBlacklisted        Boolean @default(false)
+model Dispute {
+  id                Int       @id @default(autoincrement())
+  agreementId       Int
+  agreement         Agreement @relation(fields: [agreementId], references: [id])
+
+  externalDisputeId Int?
+
+  raisedById        Int
+  raisedBy          User      @relation("DisputeRaisedBy", fields: [raisedById], references: [id])
+
+  reason            String?
+  ruling            Int?
+  rulingHash        String?
+
+  status            String    @default("RAISED")
+
+  createdAt         DateTime  @default(now())
+}
+
+model Settlement {
+  id               Int       @id @default(autoincrement())
+  agreementId      Int       @unique
+  agreement        Agreement @relation(fields: [agreementId], references: [id])
+
+  decision         String
+  idempotencyKey   String    @unique
+  providerRef      String?
+
+  intentRecordedAt DateTime  @default(now())
+  executedAt       DateTime?
+
+  status           String    @default("PENDING")
+  attempts         Int       @default(0)
+  lastError        String?
+}
+
+// The consistency layer. Every chain write goes through this table: the
+// intent row is written in the same DB transaction as the business state
+// change, before any chain call is made (see backend/services/outbox.js).
+model Outbox {
+  id            Int       @id @default(autoincrement())
+  agreementId   Int
+  agreement     Agreement @relation(fields: [agreementId], references: [id])
+
+  action        String
+  payload       String // JSON-serialized: SQLite connector has no native Json type
+
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+
+  txHash        String?
+  blockNumber   Int?
+  confirmations Int       @default(0)
+
+  lastError     String?
+  createdAt     DateTime  @default(now())
 }

@@ -1,10 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { PipelineStage, ValidationPipelineState, ValidationReport } from '@/types'
 import { runValidation, getValidation } from '@/lib/api'
-import { mockPipelineStages, mockValidationReportPass } from '@/lib/mockData'
 
 const STAGE_DELAY_MS = 1800
 const POLL_INTERVAL_MS = 2000
+
+// Stage labels only — no fabricated scores or details. Real per-stage results
+// come only from the backend report; a stage shows nothing until it arrives.
+const PIPELINE_STAGE_DEFS: Pick<PipelineStage, 'id' | 'name' | 'description'>[] = [
+    { id: 'clone', name: 'Repository Clone', description: 'Cloning submission repository' },
+    { id: 'deps', name: 'Dependency Installation', description: 'Installing project dependencies' },
+    { id: 'repoViability', name: 'Repository Viability', description: 'Checking repository contains source files' },
+    { id: 'execution', name: 'Test Execution', description: 'Running test suite in sandbox' },
+    { id: 'lint', name: 'Static Analysis', description: 'Running linter and code quality' },
+    { id: 'semantic', name: 'Semantic AI Analysis', description: 'Evaluating compliance' },
+    { id: 'aggregate', name: 'Score Aggregation', description: 'Computing weighted final score' },
+    { id: 'commit', name: 'Blockchain Commit', description: 'Recording report hash on-chain' },
+]
 
 /**
  * Validation pipeline hook.
@@ -13,11 +25,13 @@ const POLL_INTERVAL_MS = 2000
  * 1. Call POST /api/validation/run to kick off backend validation.
  * 2. Animate through pipeline stages visually while polling GET /api/validation/:jobId.
  * 3. When the backend returns a report, jump to completion with the real report.
- * 4. Falls back to mock animation if backend is unavailable.
+ * 4. If the backend never returns a report, finalReport stays null — the UI
+ *    must render that as a real pending/unavailable state, never a fabricated
+ *    PASS/FAIL (see docs/CURRENT_STATE.md §7 for the bug this replaced).
  */
 export function useValidationPipeline(jobId: number | null, autoStart = false) {
     const [pipelineState, setPipelineState] = useState<ValidationPipelineState>({
-        stages: mockPipelineStages.map(s => ({ ...s, status: 'pending' as const, score: null, details: null })),
+        stages: PIPELINE_STAGE_DEFS.map(s => ({ ...s, status: 'pending' as const, score: null, details: null })),
         currentStage: -1,
         isComplete: false,
         finalReport: null,
@@ -33,24 +47,19 @@ export function useValidationPipeline(jobId: number | null, autoStart = false) {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
     }, [])
 
-    /** Complete with a real or mock report */
+    /** Complete with the real backend report. Never invents a score/details for a stage. */
     const completeWithReport = useCallback((report: ValidationReport) => {
         cleanup()
         setPipelineState(prev => ({
-            stages: prev.stages.map(s => ({
-                ...s,
-                status: 'complete' as const,
-                score: s.score ?? 100,
-                details: s.details ?? 'Done',
-            })),
-            currentStage: mockPipelineStages.length - 1,
+            stages: prev.stages.map(s => ({ ...s, status: 'complete' as const })),
+            currentStage: PIPELINE_STAGE_DEFS.length - 1,
             isComplete: true,
             finalReport: report,
         }))
         setIsRunning(false)
     }, [cleanup])
 
-    /** Advance through stages visually */
+    /** Advance through stage LABELS visually. No stage carries a fabricated score. */
     const advanceStage = useCallback((stageIndex: number) => {
         // If we got a real report from polling, finish immediately
         if (realReportRef.current) {
@@ -60,13 +69,8 @@ export function useValidationPipeline(jobId: number | null, autoStart = false) {
 
         setPipelineState(prev => {
             const stages: PipelineStage[] = prev.stages.map((s, i) => {
-                if (i < stageIndex) {
-                    const ref = mockPipelineStages[i]
-                    return { ...s, status: 'complete' as const, score: ref.score, details: ref.details }
-                }
-                if (i === stageIndex) {
-                    return { ...s, status: 'running' as const }
-                }
+                if (i < stageIndex) return { ...s, status: 'complete' as const }
+                if (i === stageIndex) return { ...s, status: 'running' as const }
                 return s
             })
             return { ...prev, stages, currentStage: stageIndex }
@@ -80,23 +84,21 @@ export function useValidationPipeline(jobId: number | null, autoStart = false) {
             }
 
             setPipelineState(prev => {
-                const ref = mockPipelineStages[stageIndex]
-                const stages = prev.stages.map((s, i) =>
-                    i === stageIndex
-                        ? { ...s, status: 'complete' as const, score: ref.score, details: ref.details }
-                        : s
-                )
-                const isLast = stageIndex === mockPipelineStages.length - 1
+                const stages = prev.stages.map((s, i) => (i === stageIndex ? { ...s, status: 'complete' as const } : s))
+                const isLast = stageIndex === PIPELINE_STAGE_DEFS.length - 1
 
                 return {
                     stages,
                     currentStage: stageIndex,
+                    // No mock fallback: if the real report hasn't arrived yet,
+                    // finalReport stays null — the UI must show a real pending
+                    // state, never a fabricated PASS/FAIL.
                     isComplete: isLast,
-                    finalReport: isLast ? (realReportRef.current || mockValidationReportPass) : null,
+                    finalReport: isLast ? realReportRef.current : null,
                 }
             })
 
-            if (stageIndex < mockPipelineStages.length - 1) {
+            if (stageIndex < PIPELINE_STAGE_DEFS.length - 1) {
                 timerRef.current = setTimeout(() => advanceStage(stageIndex + 1), 400)
             } else {
                 setIsRunning(false)
@@ -111,7 +113,7 @@ export function useValidationPipeline(jobId: number | null, autoStart = false) {
         realReportRef.current = null
         setIsRunning(true)
         setPipelineState({
-            stages: mockPipelineStages.map(s => ({ ...s, status: 'pending' as const, score: null, details: null })),
+            stages: PIPELINE_STAGE_DEFS.map(s => ({ ...s, status: 'pending' as const, score: null, details: null })),
             currentStage: -1,
             isComplete: false,
             finalReport: null,

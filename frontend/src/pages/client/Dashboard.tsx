@@ -8,8 +8,6 @@ import EmptyState from '@/components/shared/EmptyState'
 import AnimatedList from '@/components/ui/AnimatedList'
 import CountUp from '@/components/ui/CountUp'
 import { getJobs } from '@/lib/api'
-import { formatRelativeTime } from '@/lib/utils'
-import { mockActivityItems } from '@/lib/mockData'
 import type { Job } from '@/types'
 import { PlusCircle, Briefcase, Coins, BarChart3, Shield, FolderOpen } from 'lucide-react'
 
@@ -98,24 +96,13 @@ export default function ClientDashboard() {
                     )}
                 </div>
 
-                {/* Activity feed */}
+                {/* Activity feed — no activity endpoint exists yet; show that
+                    honestly rather than a fabricated feed (see Phase 5 for
+                    the real implementation). */}
                 <div>
                     <h2 className="font-display font-semibold text-base text-text-primary mb-4">Activity</h2>
                     <GlassCard className="p-4">
-                        <AnimatedList stagger={0.06}>
-                            {mockActivityItems.map((a) => (
-                                <div key={a.id} className="flex items-start gap-2.5 py-2.5 border-b border-white/[0.04] last:border-0">
-                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${a.type === 'success' ? 'bg-emerald-400' :
-                                        a.type === 'error' ? 'bg-red-400' :
-                                            a.type === 'warning' ? 'bg-amber-400' : 'bg-violet-400'
-                                        }`} />
-                                    <div className="min-w-0">
-                                        <p className="text-xs text-text-secondary font-body leading-relaxed">{a.message}</p>
-                                        <p className="text-[11px] text-text-muted mt-0.5">{formatRelativeTime(a.timestamp)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </AnimatedList>
+                        <p className="text-xs text-text-muted font-body py-2">Activity feed not available yet.</p>
                     </GlassCard>
                 </div>
             </div>
