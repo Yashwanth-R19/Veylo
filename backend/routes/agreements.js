@@ -16,6 +16,9 @@ const eip712 = require("../lib/eip712");
 const chainService = require("../services/chainService");
 const outbox = require("../services/outbox");
 const chainConfig = require("../../config/chain.json");
+const { runEngine } = require("../../validator/core/engine");
+const { runAdvisory } = require("../../validator/advisory/AdvisoryValidator");
+const { assembleResults } = require("../../validator/core/resultsDocument");
 
 function serializeAgreement(agreement) {
   return {
@@ -177,6 +180,95 @@ router.post("/:id/evidence", async (req, res) => {
   } catch (error) {
     console.error("[Agreements] Evidence error:", error);
     res.status(500).json({ error: "Failed to submit evidence" });
+  }
+});
+
+/**
+ * POST /agreements/:id/verify
+ * Runs the deterministic engine and the advisory (AI) layer, assembles the
+ * §6 results document, and enqueues RECORD_VERIFICATION with the computed
+ * outcome. The chain-write side of this (chainService.submitRecordVerification,
+ * outbox.js's RECORD_VERIFICATION submitter and applyConfirmedEffect case)
+ * was already built in Phase 2 — this route is what finally produces the
+ * payload those expect.
+ *
+ * THE ARCHITECTURAL RULE THIS ROUTE MUST NOT BREAK: the outcome enqueued
+ * here comes from validator/core/resultsDocument.js's computeFinalOutcome(),
+ * which can only route a SEMANTIC/advisory result to NONE (NEEDS_REVIEW) —
+ * never ACCEPT or REJECT on its own. This route does not compute an
+ * alternative outcome anywhere else; it takes computeFinalOutcome()'s return
+ * value as-is.
+ */
+router.post("/:id/verify", async (req, res) => {
+  try {
+    const agreement = await prisma.agreement.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { criteria: true, evidence: { orderBy: { submittedAt: "desc" }, take: 1 } },
+    });
+    if (!agreement) return res.status(404).json({ error: "Agreement not found" });
+    if (agreement.status !== "SUBMITTED") {
+      return res.status(409).json({ error: `Cannot verify from status ${agreement.status}` });
+    }
+    if (agreement.onChainId === null) {
+      return res.status(409).json({ error: "Agreement is not yet confirmed on-chain" });
+    }
+    const evidence = agreement.evidence[0];
+    if (!evidence) return res.status(409).json({ error: "No evidence submitted for this agreement" });
+
+    const spec = {
+      repoUrl: evidence.repoUrl,
+      commitHash: evidence.commitHash,
+      criteria: agreement.criteria
+        .sort((a, b) => a.index - b.index)
+        .map((c) => ({ index: c.index, method: c.method, text: c.text, check: c.checkSpec ? JSON.parse(c.checkSpec) : undefined })),
+    };
+    const ctx = { agreementId: agreement.id, logger: console };
+
+    let deterministicOut, advisoryOut;
+    try {
+      [deterministicOut, advisoryOut] = await Promise.all([runEngine(spec, ctx), runAdvisory(spec, ctx)]);
+    } catch (err) {
+      await prisma.verification.create({
+        data: { agreementId: agreement.id, startedAt: new Date(), finishedAt: new Date(), error: err.message },
+      });
+      console.error("[Agreements] Verify error:", err);
+      return res.status(502).json({ error: "Verification run failed", details: err.message });
+    }
+
+    const { document, resultsHash, deterministicHash, outcome } = assembleResults({
+      agreementId: agreement.onChainId,
+      criteriaHash: agreement.criteriaHash,
+      evidenceHash: evidence.evidenceHash,
+      deterministic: deterministicOut.deterministic,
+      deterministicHash: deterministicOut.deterministicHash,
+      advisory: advisoryOut.advisory,
+    });
+
+    let outboxRow;
+    await prisma.$transaction(async (tx) => {
+      await tx.verification.create({
+        data: {
+          agreementId: agreement.id,
+          resultsHash,
+          deterministicHash,
+          resultsJson: JSON.stringify(document),
+          outcome,
+          engineVersion: deterministicOut.deterministic.engineVersion,
+          startedAt: new Date(),
+          finishedAt: new Date(),
+        },
+      });
+      outboxRow = await outbox.enqueue(tx, {
+        agreementId: agreement.id,
+        action: "RECORD_VERIFICATION",
+        payload: { agreementId: agreement.onChainId, resultsHash, outcome },
+      });
+    });
+
+    res.json({ outboxRowId: outboxRow.id, resultsHash, deterministicHash, outcome, results: document, advisoryStats: advisoryOut.stats });
+  } catch (error) {
+    console.error("[Agreements] Verify error:", error);
+    res.status(500).json({ error: "Failed to run verification" });
   }
 });
 

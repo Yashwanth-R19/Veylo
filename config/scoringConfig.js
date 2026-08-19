@@ -33,7 +33,7 @@ module.exports = {
 
   // Validation pipeline settings
   pipeline: {
-    // Skip agents that are unavailable (e.g., no Docker, no Ollama)
+    // Skip agents that are unavailable (e.g., no Docker, no LLM provider)
     skipUnavailable: process.env.SKIP_UNAVAILABLE !== "false",
 
     // Fallback scores when an agent fails or times out

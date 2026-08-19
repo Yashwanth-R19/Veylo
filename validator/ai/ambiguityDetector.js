@@ -36,7 +36,8 @@ async function detectAmbiguity(description) {
   // Phase 1: Rule-based detection (fast, always available)
   const ruleBasedIssues = runRuleBasedDetection(description);
 
-  // Phase 2: LLM-assisted detection (deeper, needs Ollama)
+  // Phase 2: LLM-assisted detection (deeper; Groq primary, Gemini fallback —
+  // see validator/ai/modelClient.js)
   let aiIssues = [];
   try {
     aiIssues = await runAIDetection(description);
@@ -105,9 +106,9 @@ Respond ONLY with valid JSON:
 
 If the description is clear, return: { "issues": [] }`;
 
-  const response = await modelClient.generate(prompt);
+  const { text } = await modelClient.generate(prompt, { json: true });
   try {
-    const parsed = JSON.parse(response.trim().match(/\{[\s\S]*\}/)?.[0] || "{}");
+    const parsed = JSON.parse(text.trim().match(/\{[\s\S]*\}/)?.[0] || "{}");
     return (parsed.issues || []).map((i) => ({ ...i, source: "ai" }));
   } catch {
     return [];

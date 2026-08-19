@@ -9,7 +9,6 @@
     "compile": "npx hardhat compile",
     "deploy:amoy": "npx hardhat run scripts/deploy.ts --network amoy",
     "hardhat:node": "npx hardhat node",
-    "validate": "npx ts-node scripts/runValidator.ts",
     "test": "jest",
     "test:contracts": "npx hardhat test",
     "sandbox:build": "docker build -t escrow-sandbox ./sandbox",

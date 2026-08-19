@@ -145,6 +145,33 @@ model Settlement {
   lastError        String?
 }
 
+// Advisory-layer response cache (VEYLO_BUILD_PLAN_REVISED.md Phase 3, Part A:
+// "cache aggressively, keyed on (commitHash, criterionIndex)"). Not in the
+// plan's §7 field list — that list predates the AI layer. Added this session,
+// flagged rather than silently inserted, per explicit user decision: the
+// budget this exists to protect (Groq's 100k tokens/day free tier) must
+// survive process restarts, which an in-memory-only cache would not on
+// Render's free tier (documented elsewhere in the plan as sleeping after
+// 15min idle).
+model AdvisoryCache {
+  id                Int      @id @default(autoincrement())
+  commitHash        String
+  criterionIndex    Int
+
+  status            String
+  confidence        Float
+  evidenceRefs      String // JSON-serialized array: SQLite connector has no native Json type
+  explanation       String
+
+  provider          String
+  promptTokens      Int?
+  completionTokens  Int?
+
+  createdAt         DateTime @default(now())
+
+  @@unique([commitHash, criterionIndex])
+}
+
 // The consistency layer. Every chain write goes through this table: the
 // intent row is written in the same DB transaction as the business state
 // change, before any chain call is made (see backend/services/outbox.js).

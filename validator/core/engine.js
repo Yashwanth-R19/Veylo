@@ -5,9 +5,13 @@
  * for a code-repo WorkSpec, assembles the `deterministic` section of the
  * results document (VEYLO_BUILD_PLAN_REVISED.md §6), and computes its hash.
  *
- * Does NOT evaluate SEMANTIC criteria — the AI layer is not built this
- * session (Phase 3). See computeOutcome() below for how their presence is
- * handled without fabricating a result for them.
+ * Does NOT evaluate SEMANTIC criteria — that's validator/advisory/
+ * AdvisoryValidator.js (Phase 3). computeOutcome() below produces only the
+ * `deterministic` section's own outcome field, scoped to the deterministic
+ * criteria alone; the whole system's final outcome (which also accounts for
+ * advisory results) is computed separately by validator/core/
+ * resultsDocument.js's computeFinalOutcome() — see that function's comment
+ * for why this split matters.
  *
  * ── Determinism sources found this session, and how they were handled ──
  *
@@ -19,8 +23,10 @@
  *   3. Unpinned dependency resolution → validator/checks/_shared.js's
  *      checkLockfileStatus() requires a lockfile (or a fully `==`-pinned
  *      requirements.txt); checks return INCONCLUSIVE, never PASS, otherwise.
- *   4. Absolute paths / temp directory names — cloneRepo() below uses a
- *      fresh temp dir per run, and lintAgent.js (reused unchanged) reports
+ *   4. Absolute paths / temp directory names — cloneRepo() (validator/core/
+ *      repoFetch.js, extracted in Phase 3 so the advisory layer can reuse it
+ *      too — no behavior change) uses a fresh temp dir per run, and
+ *      lintAgent.js (reused unchanged) reports
  *      absolute paths back from flake8/eslint since it's invoked with the
  *      repo's absolute path. Handled in validator/checks/lint_clean.js by
  *      normalizing every reported path to repo-relative before it reaches
@@ -52,13 +58,9 @@
  *      session's explicit instruction for that file.
  */
 
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
-const { exec } = require("child_process");
-
 const { Validator } = require("./Validator");
 const { runInSandbox } = require("./sandbox");
+const { cloneRepo, cleanupRepo } = require("./repoFetch");
 const { hashCanonical } = require("../../backend/lib/canonical");
 const { CHECKS } = require("../checks");
 const { discoverEntryPoint } = require("../pipeline/entryPointDiscovery");
@@ -66,61 +68,39 @@ const { detectJobType } = require("../pipeline/jobTypeDetector");
 
 const ENGINE_VERSION = "veylo-verify@1.0.0";
 
-function execPromise(cmd, opts) {
-  return new Promise((resolve, reject) => {
-    exec(cmd, opts, (error, stdout, stderr) => {
-      if (error) reject(new Error(`${error.message}\n${stderr || ""}`));
-      else resolve({ stdout, stderr });
-    });
-  });
-}
-
 /**
- * Clone (or copy, for local paths) the repo at a specific commit into a
- * fresh temp directory. No placeholder fallback: an inaccessible repo is a
- * real failure, reported as such, never silently substituted.
- */
-async function cloneRepo(repoUrl, commitHash, logger) {
-  const dest = path.join(os.tmpdir(), "veylo-verify", `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
-  fs.mkdirSync(dest, { recursive: true });
-
-  if (/^https?:\/\//.test(repoUrl)) {
-    await execPromise(`git clone --quiet "${repoUrl}" "${dest}"`, { timeout: 60_000 });
-    if (commitHash) {
-      await execPromise(`git checkout --quiet ${commitHash}`, { cwd: dest, timeout: 30_000 });
-    }
-  } else if (fs.existsSync(repoUrl)) {
-    fs.cpSync(repoUrl, dest, { recursive: true });
-  } else {
-    throw new Error(`Repository not accessible: "${repoUrl}"`);
-  }
-
-  logger.log(`[engine] repo prepared at commit ${commitHash || "(HEAD)"}`);
-  return dest;
-}
-
-function cleanupRepo(repoPath, logger) {
-  try {
-    fs.rmSync(repoPath, { recursive: true, force: true });
-  } catch (err) {
-    logger.warn(`[engine] cleanup failed: ${err.message}`);
-  }
-}
-
-/**
- * outcome rule, adapted for a deterministic-only engine (§5 of the plan):
+ * The `deterministic` section's OWN outcome field — scoped to the
+ * deterministic criteria only, exactly as VEYLO_BUILD_PLAN_REVISED.md §6's
+ * example document shows (`deterministic.outcome: "ACCEPT"` alongside a
+ * SEMANTIC criterion elsewhere in the same criteria list). This is NOT the
+ * whole system's final outcome — that combined computation, which also
+ * accounts for advisory/SEMANTIC results, lives in
+ * validator/core/resultsDocument.js's computeFinalOutcome() (Phase 3) and is
+ * the only value ever passed to recordVerification.
+ *
  *   REJECT  if any DETERMINISTIC criterion FAILs
  *   NONE    if any DETERMINISTIC criterion is INCONCLUSIVE
- *   NONE    if the spec contains SEMANTIC criteria (they are not evaluated —
- *           this session builds no AI layer — and a semantic criterion can
- *           never alone produce ACCEPT, so "not yet evaluated" routes to
- *           human review rather than being silently treated as passing)
- *   ACCEPT  otherwise (every DETERMINISTIC criterion PASSed, no SEMANTIC criteria present)
+ *   ACCEPT  otherwise (every DETERMINISTIC criterion PASSed)
+ *
+ * Until Phase 3, this file's only caller (scripts/measure.js, and any
+ * WorkSpec with no SEMANTIC criteria) never exercised a spec containing
+ * SEMANTIC criteria, so this function used to also stand in for "the whole
+ * system doesn't have an AI layer yet, so treat presence of an unevaluated
+ * SEMANTIC criterion as NONE." Now that resultsDocument.js's
+ * computeFinalOutcome() does that job properly (and does look at whether a
+ * SEMANTIC criterion was actually evaluated, not just whether one exists),
+ * that placeholder branch was removed — a real bug, found by this session's
+ * own live end-to-end test: with it in place, `deterministic.outcome` came
+ * back "NONE" for a spec whose deterministic criterion PASSed, purely
+ * because an unrelated SEMANTIC criterion existed elsewhere in the list,
+ * contradicting §6's own worked example. Phase 1's corpus (all 20 fixtures)
+ * has zero SEMANTIC criteria (grep-verified), so Gate 1's determinism/
+ * accuracy numbers are unaffected by this change — the removed branch never
+ * fired for any of them.
  */
-function computeOutcome(criteria, results) {
+function computeOutcome(results) {
   if (results.some((r) => r.status === "FAIL")) return "REJECT";
   if (results.some((r) => r.status === "INCONCLUSIVE")) return "NONE";
-  if (criteria.some((c) => c.method === "SEMANTIC")) return "NONE";
   return "ACCEPT";
 }
 
@@ -190,7 +170,7 @@ class Engine extends Validator {
 async function runEngine(spec, ctx) {
   const engine = new Engine();
   const results = await engine.validate(spec, ctx);
-  const outcome = computeOutcome(spec.criteria, results);
+  const outcome = computeOutcome(results);
 
   const deterministic = {
     engineVersion: ENGINE_VERSION,

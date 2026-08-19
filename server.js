@@ -36,6 +36,7 @@ app.use((req, res, next) => {
 // ─── Routes ───────────────────────────────────────────────
 app.use("/api/auth", require("./backend/routes/auth"));
 app.use("/api/agreements", require("./backend/routes/agreements"));
+app.use("/api/criteria", require("./backend/routes/criteria"));
 
 // ─── Health Check ─────────────────────────────────────────
 // Reports genuine per-dependency status, including total on-chain drift.
@@ -77,11 +78,13 @@ app.get("/", (req, res) => {
       "POST /api/agreements": "Create an agreement (needs clientSig)",
       "POST /api/agreements/:id/accept": "Worker counter-signs",
       "POST /api/agreements/:id/evidence": "Submit repo + commit",
+      "POST /api/agreements/:id/verify": "Run deterministic + advisory verification, enqueue recordVerification",
       "POST /api/agreements/:id/decide": "Client decision from NEEDS_REVIEW",
       "POST /api/agreements/:id/dispute": "Raise a dispute",
       "POST /api/agreements/:id/finalize": "Finalize",
       "GET  /api/agreements": "List agreements",
       "GET  /api/agreements/:id": "Get an agreement (DB + on-chain + inSync)",
+      "POST /api/criteria/draft": "AI-assisted criteria draft from a plain-language description",
       "GET  /api/health": "System health check, including chain drift",
     },
   });
