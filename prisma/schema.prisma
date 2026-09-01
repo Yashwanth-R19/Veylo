@@ -153,6 +153,17 @@ model Settlement {
 // survive process restarts, which an in-memory-only cache would not on
 // Render's free tier (documented elsewhere in the plan as sleeping after
 // 15min idle).
+//
+// commitHash (Phase 3 Session 2 correction): despite the column name, the
+// value written here is validator/advisory/AdvisoryValidator.js's
+// computeRepoContentHash() output, not necessarily a literal git commit
+// hash. Local filesystem fixtures (corpus/, corpus-adversarial/) always pass
+// spec.commitHash: null, which would have made every fixture repo's
+// criterion-0 cache entry collide with every other fixture's criterion-0
+// entry. The column was kept as-is (no migration) since a content hash is a
+// valid, strictly-correct value for it — same content, same cached answer —
+// but the name is now a historical artifact, not a description of what's
+// stored.
 model AdvisoryCache {
   id                Int      @id @default(autoincrement())
   commitHash        String

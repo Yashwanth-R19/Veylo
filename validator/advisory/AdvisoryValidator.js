@@ -31,7 +31,31 @@
  *   - PASS with an empty evidenceRefs array -> INCONCLUSIVE
  *   - unparseable/schema-invalid output, twice -> INCONCLUSIVE, never PASS
  *   - temperature 0 (the lowest both providers allow)
- *   - one criterion per LLM request; results cached on (commitHash, index)
+ *   - one criterion per LLM request; results cached on (cacheKey, index) —
+ *     see "Cache key" below for what cacheKey actually is and why
+ *
+ * ── Cache key (Phase 3 Session 2 fix) ───────────────────────────────────
+ * The plan's literal instruction was "cache aggressively, keyed on
+ * (commitHash, criterionIndex)", and the AdvisoryCache table's column is
+ * still named commitHash. But every spec.json in corpus/ (and, by
+ * construction, corpus-adversarial/) sets commitHash: null — these are local
+ * filesystem fixtures, not git clones. Keying the cache on the caller-
+ * supplied commitHash therefore meant two DIFFERENT repos sharing the same
+ * criterion index would silently read back each other's cached advisory
+ * result the moment any corpus repo had a SEMANTIC criterion (nothing did,
+ * until this session added one to corpus-adversarial/ — the collision was
+ * real but had never fired). That would have made the adversarial
+ * measurement in scripts/measure.js meaningless: a poisoned repo's result
+ * could just be a clean repo's cached verdict, or vice versa.
+ *
+ * Fixed here, not in the fixtures: computeRepoContentHash() below hashes the
+ * repo's actual file paths + contents (via the same hashCanonical() the rest
+ * of the system already uses for content-addressed hashing) right after
+ * clone, and that content hash — not spec.commitHash — is what's written
+ * into and looked up from the AdvisoryCache.commitHash column. This is
+ * strictly stronger than a real git commit hash would have been anyway: two
+ * repos are cache-equivalent iff their content is byte-identical, which is
+ * the actually-correct cache semantics for "same input, same LLM output."
  */
 
 const fs = require("fs");
@@ -40,6 +64,7 @@ const path = require("path");
 const prisma = require("../../backend/db/prismaClient");
 const modelClient = require("../ai/modelClient");
 const { cloneRepo, cleanupRepo } = require("../core/repoFetch");
+const { hashCanonical } = require("../../backend/lib/canonical");
 
 const MAX_FILES = 5;
 const MAX_EXCERPT_LINES_PER_FILE = 40;
@@ -351,11 +376,52 @@ function applyHardRequirements(parsed, repoPath) {
 
 // ── Cache ────────────────────────────────────────────────────────────────
 
-async function getCached(commitHash, criterionIndex) {
-  return prisma.advisoryCache.findUnique({ where: { commitHash_criterionIndex: { commitHash, criterionIndex } } });
+/**
+ * Content-addressed cache key for a fetched repo. Walks every file under
+ * repoPath (skipping the same build/vendor dirs excerpt retrieval already
+ * skips, plus .git — its contents are clone-time metadata, not submission
+ * content), and hashes the sorted {path, content} list. Two repos with
+ * identical file trees produce the same hash regardless of what
+ * spec.commitHash claims; two repos differing by even one byte (including a
+ * filename-only difference, relevant for the filename-channel injection
+ * fixtures) produce different hashes. See file header "Cache key" note for
+ * why this replaces trusting the caller-supplied commitHash.
+ */
+function computeRepoContentHash(repoPath) {
+  const entries = [];
+  (function walk(dir) {
+    let items;
+    try {
+      items = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+    } catch {
+      return;
+    }
+    for (const item of items) {
+      if (item.name === ".git") continue;
+      const full = path.join(dir, item.name);
+      if (item.isDirectory()) {
+        if (!SKIP_DIRS.has(item.name)) walk(full);
+        continue;
+      }
+      let content;
+      try {
+        content = fs.readFileSync(full, "utf8");
+      } catch {
+        continue;
+      }
+      const relPath = path.relative(repoPath, full).split(path.sep).join("/");
+      entries.push({ path: relPath, content });
+    }
+  })(repoPath);
+  entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return hashCanonical(entries);
 }
 
-async function writeCache(commitHash, criterionIndex, parsed, provider, tokens) {
+async function getCached(cacheKey, criterionIndex) {
+  return prisma.advisoryCache.findUnique({ where: { commitHash_criterionIndex: { commitHash: cacheKey, criterionIndex } } });
+}
+
+async function writeCache(cacheKey, criterionIndex, parsed, provider, tokens) {
   const data = {
     status: parsed.status,
     confidence: parsed.confidence,
@@ -366,16 +432,16 @@ async function writeCache(commitHash, criterionIndex, parsed, provider, tokens) 
     completionTokens: tokens?.completion ?? null,
   };
   await prisma.advisoryCache.upsert({
-    where: { commitHash_criterionIndex: { commitHash, criterionIndex } },
-    create: { commitHash, criterionIndex, ...data },
+    where: { commitHash_criterionIndex: { commitHash: cacheKey, criterionIndex } },
+    create: { commitHash: cacheKey, criterionIndex, ...data },
     update: data,
   });
 }
 
 // ── Per-criterion evaluation ─────────────────────────────────────────────
 
-async function evaluateCriterion(criterion, repoPath, commitHash, logger) {
-  const cached = await getCached(commitHash, criterion.index);
+async function evaluateCriterion(criterion, repoPath, cacheKey, logger) {
+  const cached = await getCached(cacheKey, criterion.index);
   if (cached) {
     const parsed = { status: cached.status, confidence: cached.confidence, evidenceRefs: JSON.parse(cached.evidenceRefs), explanation: cached.explanation };
     const finalResult = applyHardRequirements(parsed, repoPath);
@@ -402,7 +468,7 @@ async function evaluateCriterion(criterion, repoPath, commitHash, logger) {
     };
   }
 
-  await writeCache(commitHash, criterion.index, outcome.parsed, outcome.provider, outcome.tokens);
+  await writeCache(cacheKey, criterion.index, outcome.parsed, outcome.provider, outcome.tokens);
   const finalResult = applyHardRequirements(outcome.parsed, repoPath);
   return { result: { index: criterion.index, ...finalResult }, cacheHit: false, provider: outcome.provider, tokens: outcome.tokens };
 }
@@ -424,12 +490,13 @@ async function runAdvisory(spec, ctx = {}) {
 
   const repoPath = await cloneRepo(spec.repoUrl, spec.commitHash, logger);
   try {
+    const cacheKey = computeRepoContentHash(repoPath);
     const results = [];
     const stats = { calls: 0, cacheHits: 0, tokensTotal: 0, unresolvedEvidenceRefs: 0 };
     let providerUsed = null;
 
     for (const criterion of semanticCriteria) {
-      const { result, cacheHit, provider, tokens } = await evaluateCriterion(criterion, repoPath, spec.commitHash, logger);
+      const { result, cacheHit, provider, tokens } = await evaluateCriterion(criterion, repoPath, cacheKey, logger);
       if (provider) providerUsed = provider;
       if (cacheHit) stats.cacheHits++;
       else stats.calls++;
@@ -451,4 +518,4 @@ async function runAdvisory(spec, ctx = {}) {
   }
 }
 
-module.exports = { runAdvisory, validateSchema, verifyEvidenceRefs };
+module.exports = { runAdvisory, validateSchema, verifyEvidenceRefs, computeRepoContentHash };

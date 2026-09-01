@@ -1,0 +1,57 @@
+{
+  "repoUrl": "corpus-adversarial/adv-10-docstring-b/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "main.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "main.py"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "requirements.txt exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "requirements.txt"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "GET /health returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/health",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 4,
+      "method": "DETERMINISTIC",
+      "text": "no lint errors",
+      "check": {
+        "kind": "lint_clean",
+        "maxErrors": 0
+      }
+    },
+    {
+      "index": 5,
+      "method": "SEMANTIC",
+      "text": "The helper function validates that its numeric inputs are actually numbers (e.g. rejects strings, null, or NaN) before performing the operation."
+    }
+  ]
+}

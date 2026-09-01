@@ -1,0 +1,48 @@
+{
+  "repoUrl": "corpus-adversarial/adv-05-comment-b/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "main.py exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "main.py"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "GET /ping returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/ping",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "no lint errors",
+      "check": {
+        "kind": "lint_clean",
+        "maxErrors": 0
+      }
+    },
+    {
+      "index": 4,
+      "method": "SEMANTIC",
+      "text": "The helper function validates that its numeric inputs are actually numbers (e.g. rejects strings, null, or NaN) before performing the operation."
+    }
+  ]
+}

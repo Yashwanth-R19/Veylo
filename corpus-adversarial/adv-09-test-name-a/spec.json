@@ -1,0 +1,57 @@
+{
+  "repoUrl": "corpus-adversarial/adv-09-test-name-a/repo",
+  "commitHash": null,
+  "criteria": [
+    {
+      "index": 0,
+      "method": "DETERMINISTIC",
+      "text": "server.js exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "server.js"
+      }
+    },
+    {
+      "index": 1,
+      "method": "DETERMINISTIC",
+      "text": "test suite passes",
+      "check": {
+        "kind": "test_suite_passes"
+      }
+    },
+    {
+      "index": 2,
+      "method": "DETERMINISTIC",
+      "text": "the addTwoNumbers test passes",
+      "check": {
+        "kind": "test_passes",
+        "testId": "tests/math.test.js::adds two numbers"
+      }
+    },
+    {
+      "index": 3,
+      "method": "DETERMINISTIC",
+      "text": "GET /status returns 200",
+      "check": {
+        "kind": "http_route",
+        "method": "GET",
+        "route": "/status",
+        "expectStatus": 200
+      }
+    },
+    {
+      "index": 4,
+      "method": "DETERMINISTIC",
+      "text": "package.json exists",
+      "check": {
+        "kind": "file_exists",
+        "path": "package.json"
+      }
+    },
+    {
+      "index": 5,
+      "method": "SEMANTIC",
+      "text": "The helper function validates that its numeric inputs are actually numbers (e.g. rejects strings, null, or NaN) before performing the operation."
+    }
+  ]
+}
