@@ -11,10 +11,10 @@ export default function DeadlineCountdown({ deadline, className }: DeadlineCount
     const { text, urgency } = useCountdown(deadline)
 
     const colorMap = {
-        normal: 'text-text-secondary',
-        warn: 'text-amber-400',
-        critical: 'text-red-400',
-        expired: 'text-red-500',
+        normal: 'text-text',
+        warn: 'text-warning',
+        critical: 'text-danger',
+        expired: 'text-danger',
     }
 
     return (

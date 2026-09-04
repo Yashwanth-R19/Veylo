@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
 import { getOutboxEntries, getChainInfo } from '@/lib/api'
@@ -36,13 +36,13 @@ export default function ChainPanel({ agreementId }: { agreementId: number }) {
     }, [agreementId])
 
     return (
-        <GlassCard className="p-6 space-y-4">
-            <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-violet-400" /> Chain Panel
+        <Card className="p-6 space-y-4">
+            <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-accent" /> Chain Panel
             </h2>
 
             {error && (
-                <div className="flex items-start gap-2 text-xs text-red-400 font-body">
+                <div className="flex items-start gap-2 text-xs text-danger font-body">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     <span>{error}</span>
                 </div>
@@ -54,9 +54,9 @@ export default function ChainPanel({ agreementId }: { agreementId: number }) {
             {!error && entries !== null && entries.length > 0 && (
                 <div className="space-y-3">
                     {entries.map((e) => (
-                        <div key={e.id} className="rounded-lg border border-white/[0.06] p-3 space-y-1.5">
+                        <div key={e.id} className="rounded-md border border-border p-3 space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-text-primary font-body font-medium">{ACTION_LABELS[e.action] || e.action}</span>
+                                <span className="text-sm text-text-heading font-body font-medium">{ACTION_LABELS[e.action] || e.action}</span>
                                 <span className="text-[10px] uppercase tracking-wide text-text-muted font-body">{e.status}</span>
                             </div>
                             {e.txHash ? (
@@ -73,11 +73,11 @@ export default function ChainPanel({ agreementId }: { agreementId: number }) {
                                 <span>{e.confirmations} confirmation{e.confirmations === 1 ? '' : 's'}</span>
                                 <span>{formatDateTime(e.createdAt)}</span>
                             </div>
-                            {e.lastError && <p className="text-[11px] text-red-400 font-body">{e.lastError}</p>}
+                            {e.lastError && <p className="text-[11px] text-danger font-body">{e.lastError}</p>}
                         </div>
                     ))}
                 </div>
             )}
-        </GlassCard>
+        </Card>
     )
 }

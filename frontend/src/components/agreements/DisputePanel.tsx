@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import WalletAddress from '@/components/shared/WalletAddress'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
@@ -57,21 +57,21 @@ export default function DisputePanel({
 
     if (error) {
         return (
-            <GlassCard className="p-6 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400 font-body">{error}</p>
-            </GlassCard>
+            <Card className="p-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-body">{error}</p>
+            </Card>
         )
     }
     if (!view) return <LoadingSkeleton variant="card" />
 
     return (
-        <GlassCard className="p-6 space-y-4">
-            <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                <Scale className="w-4 h-4 text-orange-400" /> Dispute
+        <Card className="p-6 space-y-4">
+            <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                <Scale className="w-4 h-4 text-warning" /> Dispute
             </h2>
 
-            <div className="text-xs text-text-muted font-body bg-orange-500/[0.06] border border-orange-500/20 rounded-md px-3 py-2">
+            <div className="text-xs text-text-muted font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                 The arbitrator is the Veylo operator acting under Kleros's own documented
                 <code className="mx-1 font-mono">CentralizedArbitrator</code>
                 testing pattern — not an independent or neutral third party. See the README's trust model.
@@ -82,12 +82,12 @@ export default function DisputePanel({
                     <p className="text-xs text-text-muted font-body">No dispute has been raised for this agreement.</p>
                     {canRaise && (
                         <div className="space-y-2 max-w-md">
-                            <div className="flex rounded-lg border border-white/[0.08] overflow-hidden w-fit">
+                            <div className="flex rounded-md border border-border overflow-hidden w-fit">
                                 {(['client', 'worker'] as const).map((p) => (
                                     <button
                                         key={p}
                                         onClick={() => setParty(p)}
-                                        className={`px-3 py-1.5 text-[11px] font-medium font-body uppercase tracking-wide transition-colors ${party === p ? 'bg-orange-600 text-white' : 'text-text-muted hover:text-text-secondary'}`}
+                                        className={`px-3 py-1.5 text-[11px] font-medium font-body uppercase tracking-wide transition-colors ${party === p ? 'bg-warning text-accent-contrast' : 'text-text-muted hover:text-text'}`}
                                     >
                                         as {p}
                                     </button>
@@ -102,11 +102,11 @@ export default function DisputePanel({
                             <button
                                 onClick={handleRaise}
                                 disabled={raising}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 rounded-md bg-warning hover:brightness-110 disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors"
                             >
                                 {raising && <Loader2 className="w-4 h-4 animate-spin" />} Raise Dispute
                             </button>
-                            {raiseError && <p className="text-xs text-red-400 font-body">{raiseError}</p>}
+                            {raiseError && <p className="text-xs text-danger font-body">{raiseError}</p>}
                         </div>
                     )}
                 </div>
@@ -117,11 +117,11 @@ export default function DisputePanel({
                     <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Dispute status</p>
-                            <p className="text-text-primary font-body">{view.dispute.status}</p>
+                            <p className="text-text-heading font-body">{view.dispute.status}</p>
                         </div>
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Ruling</p>
-                            <p className="text-text-primary font-body">
+                            <p className="text-text-heading font-body">
                                 {view.dispute.ruling !== null ? RULING_LABELS[view.dispute.ruling] : 'Not yet ruled'}
                             </p>
                         </div>
@@ -131,13 +131,13 @@ export default function DisputePanel({
                         </div>
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Raised</p>
-                            <p className="text-text-primary font-body">{formatDateTime(view.dispute.createdAt)}</p>
+                            <p className="text-text-heading font-body">{formatDateTime(view.dispute.createdAt)}</p>
                         </div>
                     </div>
                     {view.dispute.reason && (
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Reason (off-chain)</p>
-                            <p className="text-sm text-text-secondary font-body">{view.dispute.reason}</p>
+                            <p className="text-sm text-text font-body">{view.dispute.reason}</p>
                         </div>
                     )}
                     {view.dispute.reasonHash && <HashDisplay hash={view.dispute.reasonHash} label="reasonHash (on-chain)" />}
@@ -145,13 +145,13 @@ export default function DisputePanel({
                         <p className="text-xs text-text-muted font-body">On-chain dispute status: {view.onChain.disputeStatus}</p>
                     )}
                     {view.chainError && (
-                        <div className="flex items-start gap-2 text-xs text-amber-400 font-body bg-amber-500/[0.06] border border-amber-500/20 rounded-md px-3 py-2">
+                        <div className="flex items-start gap-2 text-xs text-warning font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                             <span>On-chain dispute status unavailable: {view.chainError}</span>
                         </div>
                     )}
                 </div>
             )}
-        </GlassCard>
+        </Card>
     )
 }

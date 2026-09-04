@@ -1,13 +1,20 @@
 import { useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/theme/useTheme'
 
 interface SpotlightCardProps {
     children: React.ReactNode
     className?: string
 }
 
+/**
+ * A mouse-tracked radial spotlight hover — one of the few permitted
+ * "extra" motion effects (Aporia's design spec allows it explicitly),
+ * gated to the dark theme only, matching that same rule.
+ */
 export default function SpotlightCard({ children, className }: SpotlightCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
+    const { theme } = useTheme()
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!cardRef.current) return
@@ -21,19 +28,20 @@ export default function SpotlightCard({ children, className }: SpotlightCardProp
     return (
         <div
             ref={cardRef}
-            onMouseMove={handleMouseMove}
+            onMouseMove={theme === 'dark' ? handleMouseMove : undefined}
             className={cn(
-                'relative glass overflow-hidden group card-hover',
+                'relative surface overflow-hidden group card-hover',
                 className
             )}
         >
-            {/* Spotlight overlay */}
-            <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{
-                    background: 'radial-gradient(350px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%), rgba(139, 92, 246, 0.07), transparent 60%)',
-                }}
-            />
+            {theme === 'dark' && (
+                <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{
+                        background: 'radial-gradient(350px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%), rgba(181, 96, 46, 0.10), transparent 60%)',
+                    }}
+                />
+            )}
             <div className="relative z-10">
                 {children}
             </div>

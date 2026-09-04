@@ -11,7 +11,7 @@ export default function AmountDisplay({ amount, currency = 'USD', size = 'md', c
     const sizeClass = size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-base' : 'text-sm'
 
     return (
-        <span className={cn('font-mono font-semibold text-text-primary', sizeClass, className)}>
+        <span className={cn('font-mono font-semibold text-text-heading', sizeClass, className)}>
             {formatCurrency(amount, currency)}
         </span>
     )

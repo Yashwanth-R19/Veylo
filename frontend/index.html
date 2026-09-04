@@ -5,16 +5,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Veylo — Autonomous freelance contracts. Requirements locked. Validation automated. Payment released by math." />
-  <title>Veylo — Trustless Freelance Escrow</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-    rel="stylesheet" />
+    content="Veylo — verifiable acceptance for software deliverables. Criteria signed before work begins; acceptance decided by reproducible, deterministic checks, not a discretionary score." />
+  <title>Veylo — Verifiable Acceptance for Software Deliverables</title>
+  <script>
+    // Stamp the stored theme before first paint so there's no flash of the
+    // wrong theme while React hydrates (ThemeProvider reads the same key).
+    (function () {
+      try {
+        var stored = window.localStorage.getItem('veylo-theme')
+        document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'dark')
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark')
+      }
+    })()
+  </script>
 </head>
 
-<body style="background-color: #06060F; color: #F1F5F9; font-family: 'Inter', sans-serif;">
+<body style="background-color: #0B0C0E; color: #C7CCD2;">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

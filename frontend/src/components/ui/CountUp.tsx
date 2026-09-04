@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
-import { useInView } from 'framer-motion'
+import { useRef, useEffect, useState } from 'react'
+import { useInView, useReducedMotion } from 'framer-motion'
 
 interface CountUpProps {
     end: number
@@ -14,11 +14,12 @@ interface CountUpProps {
 export default function CountUp({ end, duration = 1.5, decimals = 0, prefix = '', suffix = '', className = '', delay = 0 }: CountUpProps) {
     const ref = useRef<HTMLSpanElement>(null)
     const isInView = useInView(ref, { once: true })
-    const [value, setValue] = useState(0)
+    const reduceMotion = useReducedMotion()
+    const [value, setValue] = useState(reduceMotion ? end : 0)
     const [hasAnimated, setHasAnimated] = useState(false)
 
     useEffect(() => {
-        if (!isInView || hasAnimated) return
+        if (!isInView || hasAnimated || reduceMotion) return
 
         const timer = setTimeout(() => {
             const startTime = performance.now()
@@ -42,7 +43,7 @@ export default function CountUp({ end, duration = 1.5, decimals = 0, prefix = ''
         }, delay)
 
         return () => clearTimeout(timer)
-    }, [isInView, end, duration, delay, hasAnimated])
+    }, [isInView, end, duration, delay, hasAnimated, reduceMotion])
 
     return (
         <span ref={ref} className={className}>

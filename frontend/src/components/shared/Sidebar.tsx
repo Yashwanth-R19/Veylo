@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useApp } from '@/context/AppContext'
 import { cn } from '@/lib/utils'
+import ThemeToggle from '@/theme/ThemeToggle'
 import {
     PlusCircle, FolderOpen, ChevronLeft, LogOut, User,
 } from 'lucide-react'
@@ -16,7 +17,7 @@ const freelancerNav = [
     { to: '/freelancer', icon: FolderOpen, label: 'Agreements', end: true },
 ]
 
-export default function GlassSidebar() {
+export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false)
     const { state: authState, logout } = useAuth()
     const { state: appState } = useApp()
@@ -35,14 +36,14 @@ export default function GlassSidebar() {
     return (
         <aside
             className={cn(
-                'fixed left-0 top-0 bottom-0 z-40 glass-sidebar flex flex-col transition-all duration-300',
+                'fixed left-0 top-0 bottom-0 z-40 sidebar-surface flex flex-col transition-all duration-300',
                 collapsed ? 'w-16' : 'w-[260px]',
             )}
         >
             {/* Logo */}
-            <div className="h-16 flex items-center px-5 border-b border-white/[0.06]">
-                <NavLink to="/" className="font-display font-bold text-lg tracking-tight text-text-primary">
-                    {collapsed ? <span className="text-violet-400">V</span> : <><span className="text-violet-400">V</span>eylo</>}
+            <div className="h-16 flex items-center px-5 border-b border-border">
+                <NavLink to="/" className="font-display font-bold text-lg tracking-tight text-text-heading">
+                    {collapsed ? <span className="text-accent">V</span> : <><span className="text-accent">V</span>eylo</>}
                 </NavLink>
             </div>
 
@@ -55,10 +56,10 @@ export default function GlassSidebar() {
                         end={item.end}
                         className={({ isActive }) =>
                             cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                                'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all',
                                 isActive
-                                    ? 'bg-white/[0.06] text-text-primary border-l-2 border-violet-500 ml-0'
-                                    : 'text-text-muted hover:text-text-secondary hover:bg-white/[0.03]',
+                                    ? 'bg-bg-elevated text-text-heading border-l-2 border-accent'
+                                    : 'text-text-muted hover:text-text hover:bg-bg-subtle',
                                 collapsed && 'justify-center px-2',
                             )
                         }
@@ -69,19 +70,22 @@ export default function GlassSidebar() {
                 ))}
             </nav>
 
-            {/* Bottom section — User info */}
-            <div className="p-4 border-t border-white/[0.06] space-y-3">
+            {/* Bottom section — theme toggle + user info */}
+            <div className="p-4 border-t border-border space-y-3">
+                <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-start')}>
+                    <ThemeToggle />
+                </div>
                 {authState.user && !collapsed && (
                     <div className="space-y-1.5">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-violet-500/15 text-violet-400 border border-violet-500/20 uppercase tracking-wider font-body">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-accent-bg text-accent border border-accent-border uppercase tracking-wider font-body">
                             {roleLabel}
                         </span>
                         <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center">
-                                <User className="w-3 h-3 text-violet-400" />
+                            <div className="w-6 h-6 rounded-full bg-accent-bg flex items-center justify-center">
+                                <User className="w-3 h-3 text-accent" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs text-text-primary font-body truncate">{authState.user.name || authState.user.email}</p>
+                                <p className="text-xs text-text-heading font-body truncate">{authState.user.name || authState.user.email}</p>
                                 <p className="text-[10px] text-text-muted font-body truncate">{authState.user.email}</p>
                             </div>
                         </div>
@@ -90,7 +94,7 @@ export default function GlassSidebar() {
                 {!collapsed && (
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 text-xs text-text-muted hover:text-text-secondary transition-colors font-body"
+                        className="flex items-center gap-2 text-xs text-text-muted hover:text-text transition-colors font-body"
                     >
                         <LogOut className="w-3.5 h-3.5" />
                         Sign Out
@@ -98,7 +102,7 @@ export default function GlassSidebar() {
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="flex items-center justify-center w-full text-text-muted hover:text-text-secondary transition-colors"
+                    className="flex items-center justify-center w-full text-text-muted hover:text-text transition-colors"
                 >
                     <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
                 </button>

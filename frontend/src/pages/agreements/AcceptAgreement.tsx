@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 import SignPanel from '@/components/shared/SignPanel'
@@ -53,10 +53,10 @@ export default function AcceptAgreement() {
 
     if (loadError) {
         return (
-            <GlassCard className="p-6 flex items-start gap-3 max-w-lg mx-auto">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400 font-body">{loadError}</p>
-            </GlassCard>
+            <Card className="p-6 flex items-start gap-3 max-w-lg mx-auto">
+                <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-body">{loadError}</p>
+            </Card>
         )
     }
     if (!agreement) {
@@ -66,24 +66,24 @@ export default function AcceptAgreement() {
     const { database } = agreement
     if (database.status !== 'DRAFT') {
         return (
-            <GlassCard className="p-6 max-w-lg mx-auto space-y-2">
-                <p className="text-sm text-text-primary font-body">This agreement is not awaiting acceptance.</p>
+            <Card className="p-6 max-w-lg mx-auto space-y-2">
+                <p className="text-sm text-text-heading font-body">This agreement is not awaiting acceptance.</p>
                 <StatusBadge status={database.status} />
-            </GlassCard>
+            </Card>
         )
     }
     if (database.onChainId === null) {
         return (
-            <GlassCard className="p-6 max-w-lg mx-auto">
+            <Card className="p-6 max-w-lg mx-auto">
                 <p className="text-sm text-text-muted font-body">Agreement is not yet confirmed on-chain — refresh in a moment.</p>
-            </GlassCard>
+            </Card>
         )
     }
     if (chainInfoError) {
         return (
-            <GlassCard className="p-6 max-w-lg mx-auto">
-                <p className="text-sm text-red-400 font-body">{chainInfoError}</p>
-            </GlassCard>
+            <Card className="p-6 max-w-lg mx-auto">
+                <p className="text-sm text-danger font-body">{chainInfoError}</p>
+            </Card>
         )
     }
     if (!chainInfo) {
@@ -93,21 +93,21 @@ export default function AcceptAgreement() {
     return (
         <div className="max-w-lg mx-auto space-y-4">
             <div>
-                <h1 className="font-display font-bold text-2xl text-text-primary">Accept Criteria</h1>
+                <h1 className="font-display font-semibold text-2xl text-text-heading">Accept Criteria</h1>
                 <p className="text-sm text-text-muted font-body mt-1">
                     Review the {database.criteriaJson.criteria.length} criteria below, then sign to accept them.
                 </p>
             </div>
 
-            <GlassCard className="p-5 space-y-3">
+            <Card className="p-5 space-y-3">
                 {database.criteriaJson.criteria.map((c) => (
                     <div key={c.index} className="text-sm">
                         <span className="text-[10px] uppercase tracking-wide text-text-muted font-body mr-2">{c.method}</span>
-                        <span className="text-text-secondary font-body">{c.text}</span>
+                        <span className="text-text font-body">{c.text}</span>
                     </div>
                 ))}
                 <HashDisplay hash={database.criteriaHash} label="criteriaHash" />
-            </GlassCard>
+            </Card>
 
             <SignPanel
                 heading="Sign to accept these criteria"
@@ -127,7 +127,7 @@ export default function AcceptAgreement() {
                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> Recording acceptance…
                 </div>
             )}
-            {acceptError && <p className="text-xs text-red-400 font-body">{acceptError}</p>}
+            {acceptError && <p className="text-xs text-danger font-body">{acceptError}</p>}
         </div>
     )
 }

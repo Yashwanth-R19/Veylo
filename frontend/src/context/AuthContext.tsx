@@ -42,7 +42,7 @@ interface AuthContextValue {
     state: AuthState
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
     register: (email: string, password: string, name: string, role: UserRole) => Promise<{ success: boolean; error?: string }>
-    loginWithGoogle: (profile: { email: string; name: string; googleId: string }) => Promise<{ success: boolean; error?: string }>
+    loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>
     logout: () => Promise<void>
     updateRole: (role: UserRole) => void
 }
@@ -113,10 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [])
 
-    const loginWithGoogle = useCallback(async (profile: { email: string; name: string; googleId: string }) => {
+    const loginWithGoogle = useCallback(async (idToken: string) => {
         dispatch({ type: 'LOADING' })
         try {
-            const result = await authGoogle(profile)
+            const result = await authGoogle(idToken)
             if (result.user) {
                 dispatch({ type: 'AUTHENTICATED', user: result.user })
                 if (result.user.role) localStorage.setItem('veylo_role', result.user.role)

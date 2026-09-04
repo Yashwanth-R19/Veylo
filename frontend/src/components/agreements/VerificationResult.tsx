@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
@@ -27,10 +27,10 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
 
     if (error) {
         return (
-            <GlassCard className="p-6 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400 font-body">{error}</p>
-            </GlassCard>
+            <Card className="p-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-body">{error}</p>
+            </Card>
         )
     }
     if (!bundle) return <LoadingSkeleton variant="card" count={2} />
@@ -40,9 +40,9 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
 
     if (!doc) {
         return (
-            <GlassCard className="p-6">
+            <Card className="p-6">
                 <p className="text-sm text-text-muted font-body">Verification has not run yet for this agreement.</p>
-            </GlassCard>
+            </Card>
         )
     }
 
@@ -61,10 +61,10 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
     return (
         <div className="space-y-6">
             {/* Deterministic */}
-            <GlassCard className="p-6 space-y-4">
+            <Card className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Deterministic
+                    <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-success" /> Deterministic
                     </h2>
                     <span className="text-[10px] text-text-muted font-body uppercase tracking-wide">Decides the outcome</span>
                 </div>
@@ -73,9 +73,9 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
                 </p>
                 <div className="space-y-2">
                     {doc.deterministic.results.map((r) => (
-                        <div key={r.index} className="rounded-lg border border-white/[0.06] p-3 space-y-1.5">
+                        <div key={r.index} className="rounded-md border border-border p-3 space-y-1.5">
                             <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs text-text-secondary font-body">{criteriaByIndex.get(r.index)?.text || `Criterion ${r.index}`}</span>
+                                <span className="text-xs text-text font-body">{criteriaByIndex.get(r.index)?.text || `Criterion ${r.index}`}</span>
                                 <StatusBadge status={r.status} />
                             </div>
                             <p className="text-xs text-text-muted font-body">{r.detail}</p>
@@ -85,23 +85,23 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
                         </div>
                     ))}
                 </div>
-            </GlassCard>
+            </Card>
 
             <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/[0.08]" />
+                <div className="flex-1 h-px bg-border" />
                 <span className="text-[10px] uppercase tracking-widest text-text-muted font-body">Advisory below — does not affect the outcome</span>
-                <div className="flex-1 h-px bg-white/[0.08]" />
+                <div className="flex-1 h-px bg-border" />
             </div>
 
             {/* Advisory */}
-            <GlassCard className="p-6 space-y-4 border-dashed">
+            <Card className="p-6 space-y-4 border-dashed">
                 <div className="flex items-center justify-between">
-                    <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-violet-400" /> Advisory (AI)
+                    <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-accent" /> Advisory (AI)
                     </h2>
                     <span className="text-[10px] text-text-muted font-body uppercase tracking-wide">Evidence only, no vote</span>
                 </div>
-                <p className="text-xs text-amber-400/90 font-body bg-amber-500/[0.06] border border-amber-500/20 rounded-md px-3 py-2">
+                <p className="text-xs text-warning font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                     These results are advisory. They can inform a human reviewer during NEEDS_REVIEW, but they never
                     determine ACCEPT or REJECT on their own.
                 </p>
@@ -111,9 +111,9 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
                 ) : (
                     <div className="space-y-2">
                         {doc.advisory.results.map((r) => (
-                            <div key={r.index} className="rounded-lg border border-white/[0.06] p-3 space-y-1.5">
+                            <div key={r.index} className="rounded-md border border-border p-3 space-y-1.5">
                                 <div className="flex items-center justify-between gap-3">
-                                    <span className="text-xs text-text-secondary font-body">{criteriaByIndex.get(r.index)?.text || `Criterion ${r.index}`}</span>
+                                    <span className="text-xs text-text font-body">{criteriaByIndex.get(r.index)?.text || `Criterion ${r.index}`}</span>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[11px] font-mono text-text-muted">{(r.confidence * 100).toFixed(0)}%</span>
                                         <StatusBadge status={r.status} />
@@ -127,12 +127,12 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
                         ))}
                     </div>
                 )}
-            </GlassCard>
+            </Card>
 
             {/* Reproducibility panel */}
-            <GlassCard className="p-6 space-y-3">
-                <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-violet-400" /> Reproducibility
+            <Card className="p-6 space-y-3">
+                <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-accent" /> Reproducibility
                 </h2>
                 <p className="text-xs text-text-muted font-body">
                     deterministicHash covers only the deterministic section above and is the value claimed reproducible —
@@ -140,16 +140,16 @@ export default function VerificationResult({ agreementId }: { agreementId: numbe
                 </p>
                 {bundle.deterministicHash && <HashDisplay hash={bundle.deterministicHash} label="deterministicHash" />}
                 <div className="relative">
-                    <pre className="text-[11px] font-mono text-text-secondary bg-black/20 rounded-lg p-3 overflow-x-auto pr-10">{verifyCommand}</pre>
-                    <button onClick={handleCopy} className="absolute top-2 right-2 text-text-muted hover:text-text-secondary transition-colors">
-                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <pre className="text-[11px] font-mono text-text bg-bg-subtle border border-border rounded-md p-3 overflow-x-auto pr-10">{verifyCommand}</pre>
+                    <button onClick={handleCopy} className="absolute top-2 right-2 text-text-muted hover:text-text transition-colors">
+                        {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                 </div>
                 <p className="text-[11px] text-text-muted font-body">
                     tools/verify.js is standalone — it reimplements the hashing and signature verification itself
                     rather than importing this codebase, so a passing run proves something independent.
                 </p>
-            </GlassCard>
+            </Card>
         </div>
     )
 }

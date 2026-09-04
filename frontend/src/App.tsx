@@ -4,8 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { AppProvider } from '@/context/AppContext'
 import { AuthProvider } from '@/context/AuthContext'
 import { useAuth } from '@/hooks/useAuth'
-import AmbientBackground from '@/components/shared/AmbientBackground'
-import GlassSidebar from '@/components/shared/GlassSidebar'
+import Sidebar from '@/components/shared/Sidebar'
 
 // Lazy-load all pages
 const Landing = lazy(() => import('@/pages/Landing'))
@@ -22,7 +21,7 @@ function ProtectedRoute() {
 
   if (state.isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="w-8 h-8 spinner" />
       </div>
     )
@@ -39,9 +38,8 @@ function DashboardLayout() {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-background">
-      <AmbientBackground />
-      <GlassSidebar />
+    <div className="min-h-screen bg-bg">
+      <Sidebar />
       <main className="relative z-10 ml-[260px] p-8">
         <AnimatePresence mode="wait">
           <motion.div
@@ -60,7 +58,7 @@ function DashboardLayout() {
 }
 
 const loadingFallback = (
-  <div className="min-h-screen bg-background flex items-center justify-center">
+  <div className="min-h-screen bg-bg flex items-center justify-center">
     <div className="w-8 h-8 spinner" />
   </div>
 )

@@ -7,10 +7,17 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const router = express.Router();
 
 const prisma = require("../db/prismaClient");
 const { requireAuth, JWT_SECRET } = require("../middleware/authMiddleware");
+
+// No hardcoded fallback, same reasoning as JWT_SECRET above: a silently
+// missing audience would make verifyIdToken() accept a token issued for a
+// DIFFERENT Google OAuth client, defeating the point of verifying it at all.
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 const TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -152,21 +159,47 @@ router.put("/role", requireAuth, async (req, res) => {
 });
 
 // ─── POST /auth/google ─────────────────────────
-// Simplified Google OAuth — frontend sends the Google profile data
-// In production, use passport-google-oauth20 with proper redirect flow
+// Real Google Identity Services flow: the frontend (@react-oauth/google)
+// gets a signed ID token JWT directly from Google and sends only that here.
+// It is verified against Google's public keys via google-auth-library —
+// never trust client-submitted profile fields directly. The previous
+// version of this route accepted a raw {email, googleId} body with no
+// verification at all, which let anyone log in as any email address; that
+// was a real, exploitable hole, not a hypothetical one, fixed by this
+// rewrite rather than left running alongside it.
 router.post("/google", async (req, res) => {
     try {
-        const { email, name, googleId } = req.body;
-
-        if (!email || !googleId) {
-            return res.status(400).json({ error: "Google profile data required" });
+        if (!googleClient) {
+            return res.status(503).json({ error: "Google sign-in is not configured on this server (GOOGLE_CLIENT_ID missing)" });
         }
 
-        // Find or create user
+        const { idToken } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ error: "idToken is required" });
+        }
+
+        let payload;
+        try {
+            const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+            payload = ticket.getPayload();
+        } catch (err) {
+            return res.status(401).json({ error: "Invalid Google credential" });
+        }
+
+        if (!payload?.email || !payload.sub) {
+            return res.status(401).json({ error: "Invalid Google credential" });
+        }
+        if (!payload.email_verified) {
+            return res.status(401).json({ error: "Google account email is not verified" });
+        }
+
+        const { email, name, sub: googleId } = payload;
+
+        // Find or create user, keyed on the VERIFIED email/sub above — not
+        // anything the request body claimed.
         let user = await prisma.user.findUnique({ where: { email } });
 
         if (user) {
-            // Update OAuth info if not already set
             if (!user.oauthId) {
                 user = await prisma.user.update({
                     where: { id: user.id },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 import AmountDisplay from '@/components/shared/AmountDisplay'
@@ -68,10 +68,10 @@ export default function AgreementDetail() {
 
     if (error) {
         return (
-            <GlassCard className="p-6 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400 font-body">{error}</p>
-            </GlassCard>
+            <Card className="p-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-body">{error}</p>
+            </Card>
         )
     }
     if (!agreement) return <LoadingSkeleton variant="card" count={3} />
@@ -95,10 +95,10 @@ export default function AgreementDetail() {
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
-            <GlassCard className="p-6 space-y-4">
+            <Card className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h1 className="font-display font-bold text-2xl text-text-primary">Agreement #{database.id}</h1>
+                        <h1 className="font-display font-semibold text-2xl text-text-heading">Agreement #{database.id}</h1>
                         <div className="flex items-center gap-3 mt-2">
                             <StatusBadge status={database.status} />
                             {database.outcome !== 'NONE' && <StatusBadge status={database.outcome} />}
@@ -132,38 +132,38 @@ export default function AgreementDetail() {
                 )}
 
                 {chainError && (
-                    <div className="flex items-start gap-2 text-xs text-amber-400 font-body bg-amber-500/[0.06] border border-amber-500/20 rounded-md px-3 py-2">
+                    <div className="flex items-start gap-2 text-xs text-warning font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                         <span>Chain state unavailable: {chainError}</span>
                     </div>
                 )}
                 {onChain && !inSync && !chainError && (
-                    <div className="flex items-start gap-2 text-xs text-orange-400 font-body bg-orange-500/[0.06] border border-orange-500/20 rounded-md px-3 py-2">
+                    <div className="flex items-start gap-2 text-xs text-danger font-body bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                         <span>Database and chain disagree — database says {database.status}/{database.outcome}, chain says {onChain.status}/{onChain.outcome}.</span>
                     </div>
                 )}
-            </GlassCard>
+            </Card>
 
             {/* Progress trail */}
-            <GlassCard className="p-6">
-                <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2 mb-4">
-                    <GitBranch className="w-4 h-4 text-violet-400" /> Progress
+            <Card className="p-6">
+                <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2 mb-4">
+                    <GitBranch className="w-4 h-4 text-accent" /> Progress
                 </h2>
                 {stages.map((s, i) => (
                     <PipelineStageRow key={s.id} stage={s} isActive={s.status === 'running'} isLast={i === stages.length - 1} index={i} />
                 ))}
-            </GlassCard>
+            </Card>
 
             {/* Actions per current state */}
-            <GlassCard className="p-6 space-y-3">
-                <h2 className="font-display font-semibold text-sm text-text-primary">Actions</h2>
-                {actionError && <p className="text-xs text-red-400 font-body">{actionError}</p>}
+            <Card className="p-6 space-y-3">
+                <h2 className="font-display font-semibold text-sm text-text-heading">Actions</h2>
+                {actionError && <p className="text-xs text-danger font-body">{actionError}</p>}
 
                 {database.status === 'DRAFT' && (
                     <div className="space-y-2">
                         <p className="text-xs text-text-muted font-body">Awaiting the worker's signature to accept these criteria.</p>
-                        <Link to={`/agreements/${database.id}/accept`} className="inline-block px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors">
+                        <Link to={`/agreements/${database.id}/accept`} className="inline-block px-4 py-2 rounded-md bg-accent hover:bg-accent-strong text-accent-contrast text-sm font-medium transition-colors">
                             Accept & Sign (worker)
                         </Link>
                     </div>
@@ -177,7 +177,7 @@ export default function AgreementDetail() {
                         <button
                             disabled={actionBusy || !repoUrl.trim() || !commitHash.trim()}
                             onClick={() => runAction(() => submitEvidence(database.id, repoUrl.trim(), commitHash.trim()))}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors"
                         >
                             {actionBusy && <Loader2 className="w-4 h-4 animate-spin" />} Submit Evidence
                         </button>
@@ -190,7 +190,7 @@ export default function AgreementDetail() {
                         <button
                             disabled={actionBusy}
                             onClick={() => runAction(() => runVerification(database.id))}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors"
                         >
                             {actionBusy && <Loader2 className="w-4 h-4 animate-spin" />} Run Verification
                         </button>
@@ -201,8 +201,8 @@ export default function AgreementDetail() {
                     <div className="space-y-2">
                         <p className="text-xs text-text-muted font-body">Outcome was not automatable — the client decides, within the review window.</p>
                         <div className="flex gap-2">
-                            <button disabled={actionBusy} onClick={() => runAction(() => decideAgreement(database.id, 'ACCEPT'))} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">Accept</button>
-                            <button disabled={actionBusy} onClick={() => runAction(() => decideAgreement(database.id, 'REJECT'))} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">Reject</button>
+                            <button disabled={actionBusy} onClick={() => runAction(() => decideAgreement(database.id, 'ACCEPT'))} className="px-4 py-2 rounded-md bg-success hover:brightness-110 disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors">Accept</button>
+                            <button disabled={actionBusy} onClick={() => runAction(() => decideAgreement(database.id, 'REJECT'))} className="px-4 py-2 rounded-md bg-danger hover:brightness-110 disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors">Reject</button>
                         </div>
                     </div>
                 )}
@@ -216,7 +216,7 @@ export default function AgreementDetail() {
                         <button
                             disabled={actionBusy || (!!database.reviewWindowEnds && new Date(database.reviewWindowEnds).getTime() > Date.now())}
                             onClick={() => runAction(() => finalizeAgreement(database.id))}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors"
                         >
                             {actionBusy && <Loader2 className="w-4 h-4 animate-spin" />} Finalize
                         </button>
@@ -229,7 +229,7 @@ export default function AgreementDetail() {
                         <button
                             disabled={actionBusy}
                             onClick={() => runAction(() => finalizeAgreement(database.id))}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-50 text-accent-contrast text-sm font-medium transition-colors"
                         >
                             {actionBusy && <Loader2 className="w-4 h-4 animate-spin" />} Finalize
                         </button>
@@ -239,7 +239,7 @@ export default function AgreementDetail() {
                 {database.status === 'CANCELLED' && (
                     <p className="text-xs text-text-muted font-body">This agreement was cancelled while in Draft.</p>
                 )}
-            </GlassCard>
+            </Card>
 
             {/* Dispute — visible once an outcome exists; raising is only enabled from VERIFIED/NEEDS_REVIEW, within the window */}
             {['VERIFIED', 'NEEDS_REVIEW', 'DISPUTED', 'RULED', 'SETTLEMENT_AUTHORIZED', 'SETTLED'].includes(database.status) && (

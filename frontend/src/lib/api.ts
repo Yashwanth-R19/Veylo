@@ -146,9 +146,13 @@ export async function authMe(): Promise<User> {
     return apiFetch('/auth/me')
 }
 
-export async function authGoogle(profile: { email: string; name: string; googleId: string }): Promise<{ token: string; user: User }> {
+/** idToken is the signed JWT credential Google Identity Services hands back
+ * to the frontend (@react-oauth/google's onSuccess) — the backend verifies
+ * it against Google's own public keys rather than trusting anything else
+ * the client could claim about who it is. */
+export async function authGoogle(idToken: string): Promise<{ token: string; user: User }> {
     return apiFetch('/auth/google', {
         method: 'POST',
-        body: JSON.stringify(profile),
+        body: JSON.stringify({ idToken }),
     })
 }

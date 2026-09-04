@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 
 interface BlurTextProps {
     text: string
@@ -11,7 +11,12 @@ interface BlurTextProps {
 export default function BlurText({ text, className = '', delay = 0, stagger = 0.04 }: BlurTextProps) {
     const ref = useRef(null)
     const isInView = useInView(ref, { once: true })
+    const reduceMotion = useReducedMotion()
     const words = text.split(' ')
+
+    if (reduceMotion) {
+        return <span className={className}>{text}</span>
+    }
 
     return (
         <span ref={ref} className={className} style={{ display: 'inline' }}>
@@ -23,7 +28,7 @@ export default function BlurText({ text, className = '', delay = 0, stagger = 0.
                     transition={{
                         delay: delay + i * stagger,
                         duration: 0.5,
-                        ease: [0.25, 0.46, 0.45, 0.94],
+                        ease: [0.22, 0.61, 0.36, 1],
                     }}
                     style={{ display: 'inline-block', marginRight: '0.3em' }}
                 >

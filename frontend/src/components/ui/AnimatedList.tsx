@@ -1,4 +1,4 @@
-import { motion, type Variants } from 'framer-motion'
+import { motion, useReducedMotion, type Variants } from 'framer-motion'
 
 interface AnimatedListProps {
     children: React.ReactNode[]
@@ -16,10 +16,16 @@ const container: Variants = {
 
 const item: Variants = {
     hidden: { opacity: 0, y: 14 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
+    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 0.61, 0.36, 1] } },
 }
 
 export default function AnimatedList({ children, className = '', stagger = 0.07, delay = 0 }: AnimatedListProps) {
+    const reduceMotion = useReducedMotion()
+
+    if (reduceMotion) {
+        return <div className={className}>{children}</div>
+    }
+
     return (
         <motion.div
             variants={container}

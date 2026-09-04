@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
@@ -23,21 +23,21 @@ export default function SettlementPanel({ agreementId }: { agreementId: number }
 
     if (error) {
         return (
-            <GlassCard className="p-6 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-400 font-body">{error}</p>
-            </GlassCard>
+            <Card className="p-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-danger font-body">{error}</p>
+            </Card>
         )
     }
     if (!view) return <LoadingSkeleton variant="card" />
 
     return (
-        <GlassCard className="p-6 space-y-4">
-            <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-violet-400" /> Settlement
+        <Card className="p-6 space-y-4">
+            <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-accent" /> Settlement
             </h2>
 
-            <div className="flex items-start gap-2 text-xs text-violet-300 font-body bg-violet-500/[0.06] border border-violet-500/20 rounded-md px-3 py-2">
+            <div className="flex items-start gap-2 text-xs text-accent font-body bg-accent-bg border border-accent-border rounded-md px-3 py-2">
                 <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <span>Simulated provider ({view.provider}) — no real funds move. This demonstrates the settlement mechanism, not a real payment.</span>
             </div>
@@ -64,16 +64,16 @@ export default function SettlementPanel({ agreementId }: { agreementId: number }
                         {view.providerStatus && (
                             <div>
                                 <p className="text-xs text-text-muted font-body mb-1">Provider status</p>
-                                <p className="text-text-primary font-body">{view.providerStatus}</p>
+                                <p className="text-text-heading font-body">{view.providerStatus}</p>
                             </div>
                         )}
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Intent recorded</p>
-                            <p className="text-text-primary font-body">{formatDateTime(view.settlement.intentRecordedAt)}</p>
+                            <p className="text-text-heading font-body">{formatDateTime(view.settlement.intentRecordedAt)}</p>
                         </div>
                         <div>
                             <p className="text-xs text-text-muted font-body mb-1">Executed</p>
-                            <p className="text-text-primary font-body">{view.settlement.executedAt ? formatDateTime(view.settlement.executedAt) : '—'}</p>
+                            <p className="text-text-heading font-body">{view.settlement.executedAt ? formatDateTime(view.settlement.executedAt) : '—'}</p>
                         </div>
                     </div>
 
@@ -88,15 +88,15 @@ export default function SettlementPanel({ agreementId }: { agreementId: number }
                     {view.settlement.attempts > 0 && (
                         <p className="text-xs text-text-muted font-body">{view.settlement.attempts} attempt{view.settlement.attempts === 1 ? '' : 's'}</p>
                     )}
-                    {view.settlement.lastError && <p className="text-xs text-red-400 font-body">{view.settlement.lastError}</p>}
+                    {view.settlement.lastError && <p className="text-xs text-danger font-body">{view.settlement.lastError}</p>}
                     {view.chainError && (
-                        <div className="flex items-start gap-2 text-xs text-amber-400 font-body bg-amber-500/[0.06] border border-amber-500/20 rounded-md px-3 py-2">
+                        <div className="flex items-start gap-2 text-xs text-warning font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                             <span>On-chain settlement state unavailable: {view.chainError}</span>
                         </div>
                     )}
                 </div>
             )}
-        </GlassCard>
+        </Card>
     )
 }

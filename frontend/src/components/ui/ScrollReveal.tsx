@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 
 interface ScrollRevealProps {
     children: React.ReactNode
@@ -12,6 +12,11 @@ interface ScrollRevealProps {
 export default function ScrollReveal({ children, className = '', delay = 0, staggerIndex = 0, staggerDelay = 0.07 }: ScrollRevealProps) {
     const ref = useRef(null)
     const isInView = useInView(ref, { once: true, margin: '-60px' })
+    const reduceMotion = useReducedMotion()
+
+    if (reduceMotion) {
+        return <div className={className}>{children}</div>
+    }
 
     return (
         <motion.div
@@ -21,7 +26,7 @@ export default function ScrollReveal({ children, className = '', delay = 0, stag
             transition={{
                 delay: delay + staggerIndex * staggerDelay,
                 duration: 0.45,
-                ease: [0.25, 0.46, 0.45, 0.94],
+                ease: [0.22, 0.61, 0.36, 1],
             }}
             className={className}
         >

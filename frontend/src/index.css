@@ -1,139 +1,249 @@
 @import "tailwindcss";
 
+/*
+ * Design system: "Signet" — restrained, editorial, no glassmorphism, no
+ * neon glows, no purple. Dark "Vault" is the default; light "Certified
+ * Paper" is opt-in via a manual toggle (see theme/ThemeProvider.tsx),
+ * which stamps data-theme="dark"|"light" on <html>.
+ */
 @theme {
-  --color-background: #06060F;
-  --color-surface: rgba(255, 255, 255, 0.035);
-  --color-surface-elevated: rgba(255, 255, 255, 0.06);
-  --color-surface-subtle: rgba(255, 255, 255, 0.02);
-  --color-border-glass: rgba(255, 255, 255, 0.07);
-  --color-border-glass-strong: rgba(255, 255, 255, 0.11);
-  --color-border-glass-faint: rgba(255, 255, 255, 0.04);
-  --color-violet-400: #A78BFA;
-  --color-violet-500: #8B5CF6;
-  --color-violet-600: #7C3AED;
-  --color-violet-700: #6D28D9;
-  --color-emerald-400: #34D399;
-  --color-emerald-500: #10B981;
-  --color-amber-400: #FBBF24;
-  --color-amber-500: #F59E0B;
-  --color-red-400: #F87171;
-  --color-red-500: #EF4444;
-  --color-orange-500: #F97316;
-  --color-text-primary: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #4B5563;
-  --font-display: 'Cormorant Garamond', serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* ---- Dark (default) — "Vault" ---- */
+  --color-bg: #0B0C0E;
+  --color-bg-elevated: #141619;
+  --color-bg-subtle: #060708;
+  --color-border: #262A30;
+  --color-border-strong: #383E46;
+  --color-text: #C7CCD2;
+  --color-text-muted: #7D858F;
+  --color-text-heading: #F0F2F4;
+
+  --color-accent: #B5602E;
+  --color-accent-strong: #D47F4C;
+  --color-accent-bg: rgba(181, 96, 46, 0.12);
+  --color-accent-border: rgba(181, 96, 46, 0.38);
+  --color-accent-contrast: #FBF3EC;
+
+  --color-success: #5C9A6E;
+  --color-success-bg: rgba(92, 154, 110, 0.15);
+  --color-warning: #C99A3D;
+  --color-warning-bg: rgba(201, 154, 61, 0.15);
+  --color-danger: #C9576A;
+  --color-danger-bg: rgba(201, 87, 106, 0.15);
+  --color-info: #4E7FB0;
+  --color-info-bg: rgba(78, 127, 176, 0.15);
+
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type / spacing / radius / motion scale — the structural half of the
+     design language, independent of brand color. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+  --text-4xl: 3.75rem;
+
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.75rem;
+  --space-8: 3.5rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 480ms;
 }
 
+:root[data-theme='light'] {
+  /* ---- Light — "Certified Paper" ---- */
+  --color-bg: #F2ECE0;
+  --color-bg-elevated: #FAF6EE;
+  --color-bg-subtle: #EBE3D2;
+  --color-border: #DCD1BC;
+  --color-border-strong: #C7B99C;
+  --color-text: #3F4A5C;
+  --color-text-muted: #7A8394;
+  --color-text-heading: #1E2734;
+
+  --color-accent: #8A4620;
+  --color-accent-strong: #6B3417;
+  --color-accent-bg: rgba(138, 70, 32, 0.10);
+  --color-accent-border: rgba(138, 70, 32, 0.35);
+  --color-accent-contrast: #FBF6EE;
+
+  --color-success: #3E6B4E;
+  --color-success-bg: rgba(62, 107, 78, 0.12);
+  --color-warning: #8B6220;
+  --color-warning-bg: rgba(139, 98, 32, 0.12);
+  --color-danger: #9C4152;
+  --color-danger-bg: rgba(156, 65, 82, 0.10);
+  --color-info: #2E5578;
+  --color-info-bg: rgba(46, 85, 120, 0.10);
+}
+
+/*
+ * Base element resets live in Tailwind's `base` cascade layer (rather than
+ * unlayered) so that a utility class on the same element — e.g. a one-off
+ * `text-lg` on a <p> — always wins regardless of source order. Unlayered
+ * CSS otherwise beats every Tailwind layer including `utilities`, which is
+ * exactly the bug that caused .input-field's shorthand `padding` to silently
+ * cancel out a `pl-10` icon-clearance utility (see .input-field below).
+ */
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   html {
+    -webkit-text-size-adjust: 100%;
+    font-variant-numeric: tabular-nums;
     scroll-behavior: smooth;
     color-scheme: dark;
   }
 
+  :root[data-theme='light'] html,
+  html[data-theme='light'] {
+    color-scheme: light;
+  }
+
   body {
-    font-family: 'Inter', sans-serif;
-    background-color: #06060F;
-    color: #F1F5F9;
-    min-height: 100vh;
+    margin: 0;
+    min-height: 100svh;
+    font: var(--text-md) / var(--leading-normal) var(--font-body);
+    color: var(--color-text);
+    background: var(--color-bg);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+  }
+
+  #root {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--color-text-heading);
+    line-height: var(--leading-tight);
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--color-bg-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.15em 0.4em;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: var(--radius-full);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-strong);
+    outline-offset: 2px;
   }
 }
 
-/* ── Scrollbar — hidden by default ─────── */
-::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-/* ── Glass Utilities ────────────────────── */
-.glass {
-  background: rgba(255, 255, 255, 0.035);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-}
-
-.glass-elevated {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-}
-
-.glass-subtle {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-}
-
-.glass-navbar {
-  background: rgba(6, 6, 15, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glass-sidebar {
-  background: rgba(255, 255, 255, 0.025);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* ── Ambient Background Orbs ────────────── */
-@keyframes orb1 {
-  0% {
-    transform: translate(0, 0);
-  }
-
-  100% {
-    transform: translate(60px, 40px);
+/* --- Shared keyframes --- */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@keyframes orb2 {
-  0% {
-    transform: translate(0, 0);
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 
-  100% {
-    transform: translate(-50px, 60px);
-  }
-}
-
-@keyframes orb3 {
-  0% {
-    transform: translate(0, 0);
-  }
-
-  100% {
-    transform: translate(40px, -50px);
+  to {
+    opacity: 1;
   }
 }
 
-.orb-1 {
-  animation: orb1 80s ease-in-out infinite alternate;
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.orb-2 {
-  animation: orb2 90s ease-in-out infinite alternate;
-}
-
-.orb-3 {
-  animation: orb3 70s ease-in-out infinite alternate;
-}
-
-/* ── Shimmer / Skeleton ─────────────────── */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -144,137 +254,131 @@
   }
 }
 
-.skeleton-shimmer {
-  background: linear-gradient(90deg,
-      rgba(255, 255, 255, 0.02) 25%,
-      rgba(255, 255, 255, 0.06) 50%,
-      rgba(255, 255, 255, 0.02) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-/* ── Pulse dot ──────────────────────────── */
 @keyframes pulse-soft {
 
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.4;
     transform: scale(1);
   }
 
   50% {
-    opacity: 0.9;
-    transform: scale(1.12);
+    opacity: 1;
+    transform: scale(1.1);
   }
 }
 
-.pulse-dot {
-  animation: pulse-soft 2.4s ease-in-out infinite;
-}
+/*
+ * These behave like Tailwind "component" classes (surface, input-field,
+ * etc.) — placed in the `components` layer so a Tailwind utility on the
+ * same element (e.g. `pl-10` for an icon-adorned .input-field) always wins,
+ * matching Tailwind's own layer order (theme, base, components, utilities).
+ */
+@layer components {
+  .skeleton-shimmer {
+    background: linear-gradient(90deg,
+        var(--color-bg-subtle) 25%,
+        var(--color-bg-elevated) 50%,
+        var(--color-bg-subtle) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+  }
 
-/* ── Gradient Divider ───────────────────── */
-.gradient-divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08), transparent);
-}
+  .pulse-dot {
+    animation: pulse-soft 2.4s ease-in-out infinite;
+  }
 
-/* ── Card Hover Lift ────────────────────── */
-.card-hover {
-  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    box-shadow 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
+  .spinner {
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
 
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.12),
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    0 20px 60px rgba(0, 0, 0, 0.2);
-}
+  /* --- Surfaces: plain bordered cards, no blur, no glow --- */
+  .surface {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
 
-/* ── Glow Effects ───────────────────────── */
-.glow-violet {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.12), 0 0 60px rgba(139, 92, 246, 0.04);
-}
+  .surface-subtle {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
 
-/* ── CSS Spinner (no JS needed) ─────────── */
-@keyframes spin-arc {
-  to {
-    transform: rotate(360deg);
+  .surface-elevated {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-hover {
+    transition: border-color var(--duration-base) var(--ease-standard),
+      transform var(--duration-base) var(--ease-standard),
+      box-shadow var(--duration-base) var(--ease-standard);
+  }
+
+  .card-hover:hover {
+    border-color: var(--color-border-strong);
+    transform: translateY(-1px);
+  }
+
+  .nav-surface {
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar-surface {
+    background: var(--color-bg-subtle);
+    border-right: 1px solid var(--color-border);
+  }
+
+  .input-field {
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-heading);
+    font-size: 0.875rem;
+    font-family: var(--font-body);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  }
+
+  .input-field::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--color-accent-border);
+    box-shadow: 0 0 0 3px var(--color-accent-bg);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }
 
-.spinner {
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: #8B5CF6;
-  border-radius: 50%;
-  animation: spin-arc 0.8s linear infinite;
-}
+@media (prefers-reduced-motion: reduce) {
 
-/* ── Pipeline Connector ─────────────────── */
-.pipeline-connector {
-  width: 2px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-}
-
-/* ── Typography ─────────────────────────── */
-.font-display {
-  font-family: var(--font-display);
-}
-
-.font-body {
-  font-family: var(--font-body);
-}
-
-.font-mono {
-  font-family: var(--font-mono);
-}
-
-/* ── Form Fields ─────────────────────────── */
-.input-field {
-  padding: 0.625rem 1rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #F1F5F9;
-  font-size: 0.875rem;
-  font-family: var(--font-body);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.input-field::placeholder {
-  color: #4B5563;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
-}
-
-/* ── Aurora Background ─────────────────── */
-@keyframes aurora-shift {
-  0% {
-    transform: translate(0, 0) rotate(0deg) scale(1);
-    opacity: 0.5;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
-
-  33% {
-    transform: translate(20px, -30px) rotate(5deg) scale(1.05);
-    opacity: 0.6;
-  }
-
-  66% {
-    transform: translate(-15px, 20px) rotate(-3deg) scale(0.97);
-    opacity: 0.45;
-  }
-
-  100% {
-    transform: translate(0, 0) rotate(0deg) scale(1);
-    opacity: 0.5;
-  }
-}
-
-.aurora-layer {
-  animation: aurora-shift 30s ease-in-out infinite;
 }

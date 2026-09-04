@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Wallet, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import { cn } from '@/lib/utils'
 import { connectWallet, getConnectedAddress, signTypedData, isWalletAvailable } from '@/lib/wallet'
 import type { Eip712Domain } from '@/lib/eip712'
@@ -67,30 +67,30 @@ export default function SignPanel({ heading, description, summaryRows, domain, t
 
     if (!isWalletAvailable()) {
         return (
-            <GlassCard className="p-6">
+            <Card className="p-6">
                 <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
-                        <h3 className="font-display font-semibold text-text-primary text-sm mb-1">No wallet detected</h3>
+                        <h3 className="font-display font-semibold text-text-heading text-sm mb-1">No wallet detected</h3>
                         <p className="text-xs text-text-muted font-body">
                             Install MetaMask (or another injected wallet) to sign. Signing never costs gas and never
                             moves funds from this wallet — it only proves who agreed to what.
                         </p>
                     </div>
                 </div>
-            </GlassCard>
+            </Card>
         )
     }
 
     return (
-        <GlassCard className="p-6 space-y-5">
+        <Card className="p-6 space-y-5">
             <div>
-                <h3 className="font-display font-semibold text-text-primary text-base mb-1">{heading}</h3>
+                <h3 className="font-display font-semibold text-text-heading text-base mb-1">{heading}</h3>
                 <p className="text-xs text-text-muted font-body">{description}</p>
             </div>
 
-            <div className="rounded-lg border border-violet-500/20 bg-violet-500/[0.04] px-4 py-3">
-                <p className="text-xs text-violet-300 font-body">
+            <div className="rounded-md border border-accent-border bg-accent-bg px-4 py-3">
+                <p className="text-xs text-accent font-body">
                     You pay no gas and hold no funds here. Your wallet only produces a signature; the platform relays
                     it and pays the transaction fee.
                 </p>
@@ -100,25 +100,25 @@ export default function SignPanel({ heading, description, summaryRows, domain, t
                 {summaryRows.map((row) => (
                     <div key={row.label} className="flex items-center justify-between text-sm">
                         <span className="text-text-muted font-body">{row.label}</span>
-                        <span className="font-mono text-xs text-text-secondary text-right break-all max-w-[60%]">{row.value}</span>
+                        <span className="font-mono text-xs text-text text-right break-all max-w-[60%]">{row.value}</span>
                     </div>
                 ))}
             </div>
 
             <button
                 onClick={() => setShowRaw((s) => !s)}
-                className="text-xs text-text-muted hover:text-text-secondary transition-colors font-body underline decoration-dotted"
+                className="text-xs text-text-muted hover:text-text transition-colors font-body underline decoration-dotted"
             >
                 {showRaw ? 'Hide' : 'Show'} exact EIP-712 payload
             </button>
             {showRaw && (
-                <pre className="text-[11px] font-mono text-text-secondary bg-black/20 rounded-lg p-3 overflow-x-auto">
+                <pre className="text-[11px] font-mono text-text bg-bg-subtle border border-border rounded-md p-3 overflow-x-auto">
                     {JSON.stringify({ domain, types, value }, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2)}
                 </pre>
             )}
 
             {error && (
-                <div className="flex items-start gap-2 text-xs text-red-400 font-body">
+                <div className="flex items-start gap-2 text-xs text-danger font-body">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     <span>{error}</span>
                 </div>
@@ -129,8 +129,8 @@ export default function SignPanel({ heading, description, summaryRows, domain, t
                     onClick={handleConnect}
                     disabled={connecting}
                     className={cn(
-                        'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                        'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-60',
+                        'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors',
+                        'bg-accent hover:bg-accent-strong text-accent-contrast disabled:opacity-60',
                     )}
                 >
                     {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
@@ -140,14 +140,14 @@ export default function SignPanel({ heading, description, summaryRows, domain, t
                 <div className="space-y-3">
                     <div className="flex items-center gap-2 text-xs text-text-muted font-body">
                         <Wallet className="w-3.5 h-3.5" />
-                        Connected: <span className="font-mono text-text-secondary">{address}</span>
+                        Connected: <span className="font-mono text-text">{address}</span>
                     </div>
                     <button
                         onClick={handleSign}
                         disabled={signing || disabled}
                         className={cn(
-                            'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                            'bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-60',
+                            'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors',
+                            'bg-accent hover:bg-accent-strong text-accent-contrast disabled:opacity-60',
                         )}
                     >
                         {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
@@ -155,6 +155,6 @@ export default function SignPanel({ heading, description, summaryRows, domain, t
                     </button>
                 </div>
             )}
-        </GlassCard>
+        </Card>
     )
 }

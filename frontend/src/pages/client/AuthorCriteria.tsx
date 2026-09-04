@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import GlassCard from '@/components/shared/GlassCard'
+import Card from '@/components/shared/Card'
 import HashDisplay from '@/components/shared/HashDisplay'
 import SignPanel from '@/components/shared/SignPanel'
 import { draftCriteria, createAgreement, getChainInfo } from '@/lib/api'
@@ -199,21 +199,21 @@ export default function AuthorCriteria() {
     if (step === 'sign') {
         if (chainInfoError) {
             return (
-                <GlassCard className="p-6 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <Card className="p-6 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
                     <div>
-                        <h3 className="font-display font-semibold text-text-primary text-sm mb-1">Could not load chain configuration</h3>
+                        <h3 className="font-display font-semibold text-text-heading text-sm mb-1">Could not load chain configuration</h3>
                         <p className="text-xs text-text-muted font-body">{chainInfoError}</p>
                     </div>
-                </GlassCard>
+                </Card>
             )
         }
         if (!chainInfo) {
-            return <GlassCard className="p-6 text-sm text-text-muted font-body">Loading chain configuration…</GlassCard>
+            return <Card className="p-6 text-sm text-text-muted font-body">Loading chain configuration…</Card>
         }
         return (
             <div className="max-w-lg mx-auto space-y-4">
-                <button onClick={() => setStep('build')} className="text-xs text-text-muted hover:text-text-secondary font-body">&larr; Back to criteria</button>
+                <button onClick={() => setStep('build')} className="text-xs text-text-muted hover:text-text font-body">&larr; Back to criteria</button>
                 <SignPanel
                     heading="Sign to create this agreement"
                     description="This signature is the record that you agreed to these exact criteria and terms. It never touches gas and never moves funds."
@@ -235,7 +235,7 @@ export default function AuthorCriteria() {
                         <Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating agreement…
                     </div>
                 )}
-                {createError && <p className="text-xs text-red-400 font-body">{createError}</p>}
+                {createError && <p className="text-xs text-danger font-body">{createError}</p>}
             </div>
         )
     }
@@ -243,18 +243,18 @@ export default function AuthorCriteria() {
     return (
         <div className="max-w-3xl mx-auto space-y-6">
             <div>
-                <h1 className="font-display font-bold text-2xl text-text-primary">Author Criteria</h1>
+                <h1 className="font-display font-semibold text-2xl text-text-heading">Author Criteria</h1>
                 <p className="text-sm text-text-muted font-body mt-1">Define exactly what acceptance means before any work begins.</p>
             </div>
 
             {/* Terms */}
-            <GlassCard className="p-6 space-y-4">
-                <h2 className="font-display font-semibold text-sm text-text-primary">Terms</h2>
+            <Card className="p-6 space-y-4">
+                <h2 className="font-display font-semibold text-sm text-text-heading">Terms</h2>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                         <label className="text-xs text-text-muted font-body block mb-1">Worker wallet address</label>
                         <input className="input-field w-full" placeholder="0x…" value={workerAddress} onChange={(e) => setWorkerAddress(e.target.value)} />
-                        {workerAddress && !workerValid && <p className="text-xs text-red-400 mt-1 font-body">Not a valid address</p>}
+                        {workerAddress && !workerValid && <p className="text-xs text-danger mt-1 font-body">Not a valid address</p>}
                     </div>
                     <div>
                         <label className="text-xs text-text-muted font-body block mb-1">Amount</label>
@@ -267,15 +267,15 @@ export default function AuthorCriteria() {
                     <div className="col-span-2">
                         <label className="text-xs text-text-muted font-body block mb-1">Submission deadline</label>
                         <input type="datetime-local" className="input-field w-full" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
-                        {deadline && !deadlineValid && <p className="text-xs text-red-400 mt-1 font-body">Must be in the future</p>}
+                        {deadline && !deadlineValid && <p className="text-xs text-danger mt-1 font-body">Must be in the future</p>}
                     </div>
                 </div>
-            </GlassCard>
+            </Card>
 
             {/* AI drafting assistant */}
-            <GlassCard className="p-6 space-y-3">
-                <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-violet-400" /> AI drafting assistant
+            <Card className="p-6 space-y-3">
+                <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" /> AI drafting assistant
                 </h2>
                 <p className="text-xs text-text-muted font-body">
                     Describe the deliverable in plain language. The assistant proposes criteria and flags ambiguous ones —
@@ -290,19 +290,19 @@ export default function AuthorCriteria() {
                 <button
                     onClick={handleDraft}
                     disabled={drafting || !draftDescription.trim()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-60 text-accent-contrast text-sm font-medium transition-colors"
                 >
                     {drafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     {drafting ? 'Drafting…' : 'Draft with AI'}
                 </button>
-                {draftError && <p className="text-xs text-red-400 font-body">{draftError}</p>}
-            </GlassCard>
+                {draftError && <p className="text-xs text-danger font-body">{draftError}</p>}
+            </Card>
 
             {/* Criteria list */}
-            <GlassCard className="p-6 space-y-4">
+            <Card className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="font-display font-semibold text-sm text-text-primary">Criteria ({criteria.length})</h2>
-                    <button onClick={addBlankCriterion} className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 font-body">
+                    <h2 className="font-display font-semibold text-sm text-text-heading">Criteria ({criteria.length})</h2>
+                    <button onClick={addBlankCriterion} className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-strong font-body">
                         <Plus className="w-3.5 h-3.5" /> Add criterion
                     </button>
                 </div>
@@ -313,7 +313,7 @@ export default function AuthorCriteria() {
 
                 <div className="space-y-3">
                     {criteria.map((c, i) => (
-                        <div key={i} className="rounded-lg border border-white/[0.08] p-4 space-y-3">
+                        <div key={i} className="rounded-md border border-border p-4 space-y-3">
                             <div className="flex items-start gap-2">
                                 <textarea
                                     className="input-field flex-1 min-h-[44px]"
@@ -321,20 +321,20 @@ export default function AuthorCriteria() {
                                     value={c.text}
                                     onChange={(e) => updateCriterion(i, { text: e.target.value })}
                                 />
-                                <button onClick={() => removeCriterion(i)} className="text-text-muted hover:text-red-400 transition-colors mt-2">
+                                <button onClick={() => removeCriterion(i)} className="text-text-muted hover:text-danger transition-colors mt-2">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <div className="flex rounded-lg border border-white/[0.08] overflow-hidden">
+                                <div className="flex rounded-md border border-border overflow-hidden">
                                     {(['DETERMINISTIC', 'SEMANTIC'] as CriterionMethod[]).map((m) => (
                                         <button
                                             key={m}
                                             onClick={() => setMethod(i, m)}
                                             className={cn(
                                                 'px-3 py-1.5 text-[11px] font-medium font-body uppercase tracking-wide transition-colors',
-                                                c.method === m ? 'bg-violet-600 text-white' : 'text-text-muted hover:text-text-secondary',
+                                                c.method === m ? 'bg-accent text-accent-contrast' : 'text-text-muted hover:text-text',
                                             )}
                                         >
                                             {m}
@@ -358,7 +358,7 @@ export default function AuthorCriteria() {
                             )}
 
                             {c.ambiguous && (
-                                <div className="flex items-start gap-2 text-xs text-amber-400 font-body bg-amber-500/[0.06] border border-amber-500/20 rounded-md px-3 py-2">
+                                <div className="flex items-start gap-2 text-xs text-warning font-body bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
                                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                                     <div>
                                         <p className="font-medium">Ambiguity warning</p>
@@ -372,18 +372,18 @@ export default function AuthorCriteria() {
                                 </p>
                             )}
                             {!isCriterionValid(c) && c.text && (
-                                <p className="text-[11px] text-red-400 font-body">Incomplete — fill in all required fields for this check.</p>
+                                <p className="text-[11px] text-danger font-body">Incomplete — fill in all required fields for this check.</p>
                             )}
                         </div>
                     ))}
                 </div>
-            </GlassCard>
+            </Card>
 
             {/* criteriaHash + sign */}
-            <GlassCard className="p-6 space-y-3">
+            <Card className="p-6 space-y-3">
                 <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-violet-400" />
-                    <h2 className="font-display font-semibold text-sm text-text-primary">Commitment</h2>
+                    <Lock className="w-4 h-4 text-accent" />
+                    <h2 className="font-display font-semibold text-sm text-text-heading">Commitment</h2>
                 </div>
                 <p className="text-xs text-text-muted font-body">Once signed, neither party can change these.</p>
                 {criteriaHash ? (
@@ -394,11 +394,11 @@ export default function AuthorCriteria() {
                 <button
                     onClick={() => setStep('sign')}
                     disabled={!canContinue}
-                    className="w-full mt-2 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+                    className="w-full mt-2 px-4 py-2.5 rounded-md bg-accent hover:bg-accent-strong disabled:opacity-40 disabled:cursor-not-allowed text-accent-contrast text-sm font-medium transition-colors"
                 >
                     Continue to Sign
                 </button>
-            </GlassCard>
+            </Card>
         </div>
     )
 }

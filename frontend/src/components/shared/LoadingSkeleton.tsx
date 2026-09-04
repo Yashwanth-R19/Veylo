@@ -13,7 +13,7 @@ export default function LoadingSkeleton({ variant = 'line', count = 1, className
         return (
             <div className={cn('grid grid-cols-4 gap-4', className)}>
                 {items.map((_, i) => (
-                    <div key={i} className="glass p-5 space-y-3">
+                    <div key={i} className="surface p-5 space-y-3">
                         <div className="h-3 w-20 rounded skeleton-shimmer" />
                         <div className="h-7 w-16 rounded skeleton-shimmer" />
                     </div>
@@ -26,7 +26,7 @@ export default function LoadingSkeleton({ variant = 'line', count = 1, className
         return (
             <div className={cn('space-y-3', className)}>
                 {items.map((_, i) => (
-                    <div key={i} className="glass p-5 space-y-3">
+                    <div key={i} className="surface p-5 space-y-3">
                         <div className="h-4 w-3/5 rounded skeleton-shimmer" />
                         <div className="h-3 w-4/5 rounded skeleton-shimmer" />
                         <div className="h-3 w-2/5 rounded skeleton-shimmer" />

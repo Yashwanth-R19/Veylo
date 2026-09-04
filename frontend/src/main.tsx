@@ -1,17 +1,25 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource/cormorant-garamond/400.css'
+import '@fontsource/cormorant-garamond/500.css'
+import '@fontsource/cormorant-garamond/600.css'
+import '@fontsource/cormorant-garamond/700.css'
+import '@fontsource-variable/inter'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
+import '@fontsource/jetbrains-mono/600.css'
 import './index.css'
 import App from './App'
-
-// Ensure dark background immediately (Tailwind v4 CSS processing can delay custom base styles)
-document.documentElement.style.backgroundColor = '#06060F'
-document.body.style.backgroundColor = '#06060F'
-document.body.style.color = '#F1F5F9'
-document.body.style.fontFamily = "'Inter', sans-serif"
-document.body.style.minHeight = '100vh'
+import { ThemeProvider } from '@/theme/ThemeProvider'
+import { GoogleOAuthProvider } from '@react-oauth/google'
+import { GOOGLE_CLIENT_ID } from '@/lib/constants'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <App />
+      </GoogleOAuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
