@@ -95,7 +95,7 @@ Adversarial, not happy-path — this is the sequence that actually demonstrates 
 
 > Postgres can store the criteria and the signatures. It cannot provide an independent, operator-uncontrollable timestamp, and it cannot make omission detectable. I could backdate a row, drop a record, or replay history, and no external party could tell. That's the only gap the chain fills, and it's the only reason it's there.
 
-The rest of the data — criteria text, evidence documents, full results, dispute reasons — lives in Postgres like any other app's data and never touches the chain. Only five values ever get committed on-chain: the criteria hash and two signatures at commitment time, the results hash after verification, a ruling hash if disputed, and a settlement reference at the end. See [`docs/INTERVIEW_NOTES.md`](docs/INTERVIEW_NOTES.md) for the fuller version of this answer and its follow-ups.
+The rest of the data — criteria text, evidence documents, full results, dispute reasons — lives in Postgres like any other app's data and never touches the chain. Only five values ever get committed on-chain: the criteria hash and two signatures at commitment time, the results hash after verification, a ruling hash if disputed, and a settlement reference at the end.
 
 ---
 
@@ -241,13 +241,3 @@ npx jest            # unit tests (2 pre-existing, out-of-scope failures — see 
 ```
 
 ---
-
-## Further reading
-
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — step-by-step guide to deploying this to Neon + Render + Vercel (all free tiers)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the state machine, the deterministic/advisory boundary, canonical hashing, the outbox, the settlement saga
-- [`docs/EVALUATION.md`](docs/EVALUATION.md) — every measured number, including the bad ones, with methodology
-- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) — what's isolated, what isn't, and why
-- [`docs/INTERVIEW_NOTES.md`](docs/INTERVIEW_NOTES.md) — the questions this project actually gets asked, with honest answers
-- [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md) — the design review that shaped this architecture and what it rejected
-- [`docs/FUTURE_FEATURES.md`](docs/FUTURE_FEATURES.md) — genuinely unbuilt work, scoped and conditioned
