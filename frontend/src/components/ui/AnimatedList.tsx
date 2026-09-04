@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 
 interface AnimatedListProps {
     children: React.ReactNode[]
@@ -7,14 +7,14 @@ interface AnimatedListProps {
     delay?: number
 }
 
-const container = {
+const container: Variants = {
     hidden: {},
     show: (custom: { stagger: number; delay: number }) => ({
         transition: { staggerChildren: custom.stagger, delayChildren: custom.delay },
     }),
 }
 
-const item = {
+const item: Variants = {
     hidden: { opacity: 0, y: 14 },
     show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
 }

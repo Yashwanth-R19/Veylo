@@ -6,8 +6,19 @@ artifacts/
 data/
 *.log
 typechain-types/
-docs/
 VEYLO_BUILD_PLAN_REVISED.md
 CLAUDE.md
+
+# Superseded by PostgreSQL (Phase 5) — kept locally only for reference.
 prisma/dev.db
 prisma/dev.db-journal
+prisma/migrations.sqlite-archive/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+docs/CURRENT_STATE.md
+docs/DEPLOYMENT.md
+docs/INTERVIEW_NOTES.md

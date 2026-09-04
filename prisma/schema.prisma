@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -120,6 +120,10 @@ model Dispute {
   raisedBy          User      @relation("DisputeRaisedBy", fields: [raisedById], references: [id])
 
   reason            String?
+  // keccak256 of { reason }, same value committed on-chain as
+  // Agreement.disputeReasonHash (Phase 4 Session 1) — reason text itself
+  // never goes on-chain.
+  reasonHash        String?
   ruling            Int?
   rulingHash        String?
 
@@ -128,21 +132,50 @@ model Dispute {
   createdAt         DateTime  @default(now())
 }
 
+// Phase 4 Session 2: the settlement engine's own record. decision is read
+// from the chain (VeyloAgreements.outcome), never set by this row itself —
+// see backend/services/settlement/engine.js. holdIdempotencyKey/idempotencyKey
+// are deterministic functions of (agreementId, action), recomputed identically
+// on every attempt/restart rather than persisted-then-reused — they're stored
+// here only so a caller can see them, not because they need to be recalled.
 model Settlement {
-  id               Int       @id @default(autoincrement())
-  agreementId      Int       @unique
-  agreement        Agreement @relation(fields: [agreementId], references: [id])
+  id                 Int       @id @default(autoincrement())
+  agreementId        Int       @unique
+  agreement          Agreement @relation(fields: [agreementId], references: [id])
 
-  decision         String
-  idempotencyKey   String    @unique
-  providerRef      String?
+  decision           String
 
-  intentRecordedAt DateTime  @default(now())
-  executedAt       DateTime?
+  holdIdempotencyKey String?   @unique
+  holdRef            String?
 
-  status           String    @default("PENDING")
-  attempts         Int       @default(0)
-  lastError        String?
+  idempotencyKey     String    @unique // release/reverse idempotency key
+  providerRef        String?           // release/reverse result (payoutRef/refundRef)
+
+  settlementRefHash  String?           // keccak256(providerRef), what confirmSettlement writes on-chain
+
+  intentRecordedAt   DateTime  @default(now())
+  executedAt         DateTime?
+
+  status             String    @default("PENDING") // PENDING | SETTLED | FAILED
+  attempts           Int       @default(0)
+  lastError          String?
+}
+
+// The SIMULATED payment provider's own ledger — deliberately separate from
+// Settlement above. Represents what an external provider (Razorpay/Stripe in
+// Phase 6) would persist on ITS side, independent of Veylo's own database, so
+// idempotency-key replay after a crash is tested against a genuinely separate
+// source of truth, not against our own possibly-lost write.
+model SimulatedProviderRecord {
+  id             Int      @id @default(autoincrement())
+  idempotencyKey String   @unique
+  kind           String   // HOLD | RELEASE | REVERSE
+  agreementId    Int
+  amountMinor    String?
+  holdRef        String?  // which hold this RELEASE/REVERSE refers to
+  ref            String   // the returned holdRef / payoutRef / refundRef
+  status         String   @default("DONE")
+  createdAt      DateTime @default(now())
 }
 
 // Advisory-layer response cache (VEYLO_BUILD_PLAN_REVISED.md Phase 3, Part A:

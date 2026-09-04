@@ -64,15 +64,6 @@ export default function PipelineStageRow({ stage, isActive, isLast, index }: Pip
                     )}>
                         {stage.name}
                     </h4>
-                    {stage.score !== null && stage.status === 'complete' && (
-                        <motion.span
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="font-mono text-xs font-medium text-emerald-400"
-                        >
-                            {stage.score}%
-                        </motion.span>
-                    )}
                 </div>
                 <p className="text-xs text-text-muted font-body">
                     {stage.status === 'complete' && stage.details ? stage.details : stage.description}

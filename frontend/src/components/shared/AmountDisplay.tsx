@@ -1,17 +1,18 @@
-import { cn, formatINR } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 interface AmountDisplayProps {
     amount: string | number
+    currency?: string
     size?: 'sm' | 'md' | 'lg'
     className?: string
 }
 
-export default function AmountDisplay({ amount, size = 'md', className }: AmountDisplayProps) {
+export default function AmountDisplay({ amount, currency = 'USD', size = 'md', className }: AmountDisplayProps) {
     const sizeClass = size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-base' : 'text-sm'
 
     return (
         <span className={cn('font-mono font-semibold text-text-primary', sizeClass, className)}>
-            {formatINR(amount)}
+            {formatCurrency(amount, currency)}
         </span>
     )
 }

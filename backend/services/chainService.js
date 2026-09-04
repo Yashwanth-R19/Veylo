@@ -152,7 +152,17 @@ async function submitClientDecision(payload, overrides = {}) {
 async function submitRaiseDispute(payload, overrides = {}) {
   const contract = agreementsContract(getSignerWallet(payload.party));
   const value = payload.value ? BigInt(payload.value) : 0n;
-  return contract.raiseDispute(payload.agreementId, { value, ...overrides });
+  return contract.raiseDispute(payload.agreementId, payload.reasonHash, { value, ...overrides });
+}
+
+// Gives a ruling on the arbitrator contract as its owner (the operator,
+// acting as arbitrator per Kleros's own documented CentralizedArbitrator
+// testing pattern — see README.md). This calls back into
+// VeyloAgreements.rule() within the same transaction, moving the agreement
+// DISPUTED -> RULED and setting its outcome on-chain.
+async function submitGiveRuling(payload, overrides = {}) {
+  const contract = arbitratorContract(operatorWallet);
+  return contract.giveRuling(payload.disputeId, payload.ruling, overrides);
 }
 
 async function submitFinalize(payload, overrides = {}) {
@@ -174,6 +184,7 @@ const SUBMITTERS = {
   RAISE_DISPUTE: submitRaiseDispute,
   FINALIZE: submitFinalize,
   CONFIRM_SETTLEMENT: submitConfirmSettlement,
+  GIVE_RULING: submitGiveRuling,
 };
 
 module.exports = {

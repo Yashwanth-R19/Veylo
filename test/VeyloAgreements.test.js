@@ -29,6 +29,7 @@ const OTHER_CRITERIA_HASH = ethers.keccak256(ethers.toUtf8Bytes("criteria-v2-dif
 const EVIDENCE_HASH = ethers.keccak256(ethers.toUtf8Bytes("evidence-v1"));
 const RESULTS_HASH = ethers.keccak256(ethers.toUtf8Bytes("results-v1"));
 const SETTLEMENT_REF = ethers.keccak256(ethers.toUtf8Bytes("settlement-v1"));
+const REASON_HASH = ethers.keccak256(ethers.toUtf8Bytes("reason-v1"));
 
 const COMMITMENT_TYPES = {
   CriteriaCommitment: [
@@ -155,13 +156,13 @@ describe("VeyloAgreements", function () {
 
   async function progressToDisputedFromVerified(opts = {}) {
     const id = await progressToVerified(Outcome.ACCEPT, opts);
-    await veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST });
+    await veylo.connect(client).raiseDispute(id, opts.reasonHash ?? REASON_HASH, { value: ARBITRATION_COST });
     return id;
   }
 
   async function progressToDisputedFromNeedsReview(opts = {}) {
     const id = await progressToNeedsReview(opts);
-    await veylo.connect(worker).raiseDispute(id, { value: ARBITRATION_COST });
+    await veylo.connect(worker).raiseDispute(id, opts.reasonHash ?? REASON_HASH, { value: ARBITRATION_COST });
     return id;
   }
 
@@ -523,7 +524,7 @@ describe("VeyloAgreements", function () {
     it("reverts when called by a non-party", async function () {
       const id = await progressToVerified();
       await expect(
-        veylo.connect(other).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(other).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: caller is not a party");
     });
 
@@ -532,28 +533,43 @@ describe("VeyloAgreements", function () {
       const agreement = await veylo.getAgreement(id);
       await time.increaseTo(agreement.reviewWindowEnds);
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: review window has ended");
+    });
+
+    it("reverts when reasonHash is zero", async function () {
+      const id = await progressToVerified();
+      await expect(
+        veylo.connect(client).raiseDispute(id, ethers.ZeroHash, { value: ARBITRATION_COST })
+      ).to.be.revertedWith("VeyloAgreements: reasonHash is zero");
     });
 
     it("client can raise a dispute from VERIFIED", async function () {
       const id = await progressToVerified();
-      await expect(veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })).to.not.be.reverted;
+      await expect(veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })).to.not.be.reverted;
       const agreement = await veylo.getAgreement(id);
       expect(agreement.status).to.equal(Status.DISPUTED);
     });
 
     it("worker can raise a dispute from NEEDS_REVIEW", async function () {
       const id = await progressToNeedsReview();
-      await expect(veylo.connect(worker).raiseDispute(id, { value: ARBITRATION_COST })).to.not.be.reverted;
+      await expect(veylo.connect(worker).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })).to.not.be.reverted;
       const agreement = await veylo.getAgreement(id);
       expect(agreement.status).to.equal(Status.DISPUTED);
+    });
+
+    it("stores disputeReasonHash and emits it in DisputeRaised", async function () {
+      const id = await progressToVerified();
+      const tx = await veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST });
+      const agreement = await veylo.getAgreement(id);
+      await expect(tx).to.emit(veylo, "DisputeRaised").withArgs(id, agreement.disputeId, REASON_HASH);
+      expect(agreement.disputeReasonHash).to.equal(REASON_HASH);
     });
 
     it("forwards msg.value to the arbitrator as the arbitration fee", async function () {
       const id = await progressToVerified();
       const before = await ethers.provider.getBalance(arbitratorAddress);
-      await veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST });
+      await veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST });
       const after = await ethers.provider.getBalance(arbitratorAddress);
       expect(after - before).to.equal(ARBITRATION_COST);
     });
@@ -1204,56 +1220,56 @@ describe("VeyloAgreements", function () {
     it("reverts when the agreement is in DRAFT", async function () {
       const id = await createDraftAgreement();
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is in COMMITTED", async function () {
       const id = await progressToCommitted();
       await expect(
-        veylo.connect(worker).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(worker).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is in SUBMITTED", async function () {
       const id = await progressToSubmitted();
       await expect(
-        veylo.connect(worker).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(worker).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is already DISPUTED", async function () {
       const id = await progressToDisputedFromVerified();
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is in RULED", async function () {
       const id = await progressToRuled(1);
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is in SETTLEMENT_AUTHORIZED", async function () {
       const id = await progressToSettlementAuthorizedFromVerified();
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is SETTLED", async function () {
       const id = await progressToSettled();
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
 
     it("reverts when the agreement is CANCELLED", async function () {
       const id = await progressToCancelled();
       await expect(
-        veylo.connect(client).raiseDispute(id, { value: ARBITRATION_COST })
+        veylo.connect(client).raiseDispute(id, REASON_HASH, { value: ARBITRATION_COST })
       ).to.be.revertedWith("VeyloAgreements: not in VERIFIED or NEEDS_REVIEW");
     });
   });

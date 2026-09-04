@@ -1,34 +1,12 @@
-// ── Blockchain (for trust verification hashes only — NOT payments) ──
-export const SEPOLIA_CHAIN_ID = 11155111
-
-export const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'
-
-// ABI for trust verification — hashes and validation only, no payment functions
-export const CONTRACT_ABI = [
-    'function createJob(bytes32 reqHash, bytes32 testHash, address freelancer, uint256 deadline)',
-    'function submitWork(uint256 jobId, string repoUrl, bytes32 submissionHash)',
-    'function recordValidation(uint256 jobId, uint256 score, bytes32 reportHash)',
-    'function getJob(uint256 jobId) view returns (tuple)',
-    'event JobCreated(uint256 jobId, address client, address freelancer)',
-    'event WorkSubmitted(uint256 jobId, string repoUrl, bytes32 submissionHash)',
-    'event ValidationRecorded(uint256 jobId, uint256 score, uint8 outcome)',
-]
-
+// ── API ────────────────────────────────────────────
 export const API_BASE_URL = '/api'
 
-export const SCORE_WEIGHTS = {
-    execution: 0.50,
-    repoViability: 0.10,
-    lint: 0.20,
-    semantic: 0.20,
-} as const
+// ── Chain (Polygon Amoy) ─────────────────────────────
+// The deployed contract address is NOT here — it comes from GET
+// /api/chain-info at runtime (see lib/api.ts's getChainInfo), so the
+// frontend never signs against a stale, hardcoded address after a
+// redeploy. AMOY_CHAIN_ID is a fallback expectation for wallet network
+// switching, not the source of truth for signing.
+export const AMOY_CHAIN_ID = 80002
 
-export const SCORE_THRESHOLDS = {
-    pass: 75,
-    dispute: 50,
-} as const
-
-export const BLOCK_EXPLORER_BASE = 'https://sepolia.etherscan.io'
-
-/** @deprecated Use BLOCK_EXPLORER_BASE instead */
-export const ETHERSCAN_BASE = BLOCK_EXPLORER_BASE
+export const REVIEW_WINDOW_SECONDS = 3 * 24 * 60 * 60 // §5: 3 days, public constant

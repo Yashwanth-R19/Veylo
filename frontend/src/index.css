@@ -230,29 +230,26 @@
   font-family: var(--font-mono);
 }
 
-/* ── Score Colors ───────────────────────── */
-.score-green {
-  color: #10B981;
+/* ── Form Fields ─────────────────────────── */
+.input-field {
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #F1F5F9;
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.score-amber {
-  color: #F59E0B;
+.input-field::placeholder {
+  color: #4B5563;
 }
 
-.score-red {
-  color: #EF4444;
-}
-
-.score-bar-green {
-  background: linear-gradient(90deg, #10B981, #34D399);
-}
-
-.score-bar-amber {
-  background: linear-gradient(90deg, #F59E0B, #FBBF24);
-}
-
-.score-bar-red {
-  background: linear-gradient(90deg, #EF4444, #F87171);
+.input-field:focus {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
 }
 
 /* ── Aurora Background ─────────────────── */

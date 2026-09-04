@@ -1,30 +1,5 @@
 import { API_BASE_URL } from '@/lib/constants'
-
-// Mirrors the shape returned by GET /api/agreements/:id (backend/routes/agreements.js).
-// onChain/chainError are null/undefined until the on-chain id is known, or when
-// the chain could not be reached — never filled with a fabricated value.
-export interface OnChainAgreement {
-    client: string
-    worker: string
-    amountMinor: string
-    criteriaHash: string
-    evidenceHash: string
-    resultsHash: string
-    rulingHash: string
-    settlementRef: string
-    deadline: number
-    reviewWindowEnds: number
-    status: string
-    outcome: string
-    disputeId: string
-}
-
-export interface AgreementView {
-    database: Record<string, unknown>
-    onChain: OnChainAgreement | null
-    inSync: boolean
-    chainError: string | null
-}
+import type { AgreementRecord, AgreementView } from '@/types'
 
 /**
  * Reads real agreement state (DB + on-chain, from the deployed VeyloAgreements
@@ -42,7 +17,7 @@ export function useContract() {
         return res.json()
     }
 
-    const listAgreements = async (): Promise<Record<string, unknown>[]> => {
+    const listAgreements = async (): Promise<AgreementRecord[]> => {
         const res = await fetch(`${API_BASE_URL}/agreements`, { credentials: 'include' })
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: res.statusText }))

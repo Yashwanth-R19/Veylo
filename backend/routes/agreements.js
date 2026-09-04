@@ -19,6 +19,7 @@ const chainConfig = require("../../config/chain.json");
 const { runEngine } = require("../../validator/core/engine");
 const { runAdvisory } = require("../../validator/advisory/AdvisoryValidator");
 const { assembleResults } = require("../../validator/core/resultsDocument");
+const settlementEngine = require("../services/settlement/engine");
 
 function serializeAgreement(agreement) {
   return {
@@ -306,6 +307,8 @@ router.post("/:id/decide", async (req, res) => {
 /**
  * POST /agreements/:id/dispute
  * Body: { party: "client" | "worker", reason }
+ * The reason text is stored off-chain only (this row's `reason` column);
+ * only its hash is committed on-chain (Agreement.disputeReasonHash).
  */
 router.post("/:id/dispute", async (req, res) => {
   try {
@@ -314,26 +317,129 @@ router.post("/:id/dispute", async (req, res) => {
     if (!["VERIFIED", "NEEDS_REVIEW"].includes(agreement.status)) {
       return res.status(409).json({ error: `Cannot dispute from status ${agreement.status}` });
     }
+    if (agreement.onChainId === null) {
+      return res.status(409).json({ error: "Agreement is not yet confirmed on-chain" });
+    }
 
     const { party, reason } = req.body;
     if (!["client", "worker"].includes(party)) return res.status(400).json({ error: "party must be 'client' or 'worker'" });
 
     const raisedById = party === "client" ? agreement.clientId : agreement.workerId;
+    const reasonHash = canonical.hashCanonical({ reason: reason || "" });
 
     let outboxRow;
     await prisma.$transaction(async (tx) => {
-      await tx.dispute.create({ data: { agreementId: agreement.id, raisedById, reason: reason || null, status: "RAISED" } });
+      await tx.dispute.create({
+        data: { agreementId: agreement.id, raisedById, reason: reason || null, reasonHash, status: "RAISED" },
+      });
       outboxRow = await outbox.enqueue(tx, {
         agreementId: agreement.id,
         action: "RAISE_DISPUTE",
-        payload: { agreementId: agreement.onChainId, party, value: chainConfig.arbitrationCost },
+        payload: { agreementId: agreement.onChainId, party, reasonHash, value: chainConfig.arbitrationCost },
       });
     });
 
-    res.json({ outboxRowId: outboxRow.id });
+    res.json({ outboxRowId: outboxRow.id, reasonHash });
   } catch (error) {
     console.error("[Agreements] Dispute error:", error);
     res.status(500).json({ error: "Failed to raise dispute" });
+  }
+});
+
+/**
+ * GET /agreements/:id/dispute
+ * Status, dispute id, arbitrator address, ruling. The ruling is read live
+ * from the CentralizedArbitrator contract, never taken from the DB alone.
+ */
+router.get("/:id/dispute", async (req, res) => {
+  try {
+    const agreement = await prisma.agreement.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!agreement) return res.status(404).json({ error: "Agreement not found" });
+
+    const dispute = await prisma.dispute.findFirst({ where: { agreementId: agreement.id }, orderBy: { id: "desc" } });
+    const arbitratorAddress = chainConfig.contracts.CentralizedArbitrator.address;
+    if (!dispute) return res.json({ dispute: null, arbitratorAddress });
+
+    let onChain = null;
+    let chainError = null;
+    if (dispute.externalDisputeId !== null) {
+      try {
+        const arb = chainService.arbitratorContract();
+        const [ruling, status] = await Promise.all([
+          arb.currentRuling(dispute.externalDisputeId),
+          arb.disputeStatus(dispute.externalDisputeId),
+        ]);
+        onChain = {
+          ruling: Number(ruling),
+          disputeStatus: ["Waiting", "Appealable", "Solved"][Number(status)],
+        };
+      } catch (err) {
+        chainError = err.message;
+      }
+    }
+
+    res.json({
+      dispute: {
+        id: dispute.id,
+        reason: dispute.reason,
+        reasonHash: dispute.reasonHash,
+        status: dispute.status,
+        externalDisputeId: dispute.externalDisputeId,
+        ruling: dispute.ruling,
+        createdAt: dispute.createdAt,
+      },
+      arbitratorAddress,
+      onChain,
+      chainError,
+    });
+  } catch (error) {
+    console.error("[Agreements] Get dispute error:", error);
+    res.status(500).json({ error: "Failed to fetch dispute" });
+  }
+});
+
+/**
+ * POST /agreements/:id/rule
+ * Body: { ruling: 0 | 1 | 2 }  (0 = refused, 1 = ACCEPT, 2 = REJECT)
+ *
+ * THE OPERATOR INTERFACE FOR GIVING RULINGS. This calls
+ * CentralizedArbitrator.giveRuling() as its owner, i.e. the Veylo operator
+ * IS the arbitrator here. This is Kleros's own documented pattern for
+ * testing an arbitrable app (deploy CentralizedArbitrator, rule directly) —
+ * it is NOT an independent/neutral arbitrator. See README.md's "Arbitration"
+ * section, which states this explicitly. Production would point at Kleros
+ * Court instead.
+ */
+router.post("/:id/rule", async (req, res) => {
+  try {
+    const agreement = await prisma.agreement.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!agreement) return res.status(404).json({ error: "Agreement not found" });
+    if (agreement.status !== "DISPUTED") {
+      return res.status(409).json({ error: `Cannot rule from status ${agreement.status}` });
+    }
+
+    const { ruling } = req.body;
+    if (![0, 1, 2].includes(ruling)) return res.status(400).json({ error: "ruling must be 0, 1 or 2" });
+
+    const dispute = await prisma.dispute.findFirst({ where: { agreementId: agreement.id, status: "RAISED" }, orderBy: { id: "desc" } });
+    if (!dispute) return res.status(409).json({ error: "No RAISED dispute found for this agreement" });
+    if (dispute.externalDisputeId === null) {
+      return res.status(409).json({ error: "Dispute is not yet confirmed on-chain" });
+    }
+
+    let outboxRow;
+    await prisma.$transaction(async (tx) => {
+      outboxRow = await outbox.enqueue(tx, {
+        agreementId: agreement.id,
+        action: "GIVE_RULING",
+        payload: { agreementId: agreement.onChainId, disputeId: dispute.externalDisputeId, ruling },
+      });
+    });
+
+    res.json({ outboxRowId: outboxRow.id, note: "Ruling given by the Veylo operator acting as arbitrator (Kleros CentralizedArbitrator testing pattern) — not an independent arbitrator. See README.md." });
+  } catch (error) {
+    console.error("[Agreements] Rule error:", error);
+    res.status(500).json({ error: "Failed to submit ruling" });
   }
 });
 
@@ -364,6 +470,75 @@ router.post("/:id/finalize", async (req, res) => {
   } catch (error) {
     console.error("[Agreements] Finalize error:", error);
     res.status(500).json({ error: "Failed to finalize" });
+  }
+});
+
+/**
+ * GET /agreements/:id/settlement
+ * Chain outcome, provider reference, reconciliation status, attempt count
+ * and any error. PART F: SimulatedProvider only this session — no real
+ * money moves, and every response says so explicitly.
+ */
+router.get("/:id/settlement", async (req, res) => {
+  try {
+    const agreement = await prisma.agreement.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!agreement) return res.status(404).json({ error: "Agreement not found" });
+
+    const settlement = await prisma.settlement.findUnique({ where: { agreementId: agreement.id } });
+    if (!settlement) {
+      return res.json({ simulated: true, provider: "SimulatedProvider", settlement: null });
+    }
+
+    let onChain = null;
+    let chainError = null;
+    if (agreement.onChainId !== null) {
+      try {
+        onChain = await chainService.getAgreement(agreement.onChainId);
+      } catch (err) {
+        chainError = err.message;
+      }
+    }
+
+    let providerStatus = null;
+    const refToCheck = settlement.providerRef || settlement.holdRef;
+    if (refToCheck) {
+      try {
+        providerStatus = await settlementEngine.provider.getStatus(refToCheck);
+      } catch (err) {
+        providerStatus = `error: ${err.message}`;
+      }
+    }
+
+    let reconciliationStatus = "PENDING";
+    if (settlement.status === "SETTLED" && onChain) {
+      const matches = onChain.status === "SETTLED" && onChain.settlementRef === settlement.settlementRefHash;
+      reconciliationStatus = matches ? "RECONCILED" : "MISMATCH";
+    } else if (settlement.status === "FAILED") {
+      reconciliationStatus = "FAILED";
+    }
+
+    res.json({
+      simulated: true,
+      provider: "SimulatedProvider",
+      settlement: {
+        decision: settlement.decision,
+        status: settlement.status,
+        attempts: settlement.attempts,
+        lastError: settlement.lastError,
+        holdRef: settlement.holdRef,
+        providerRef: settlement.providerRef,
+        settlementRefHash: settlement.settlementRefHash,
+        intentRecordedAt: settlement.intentRecordedAt,
+        executedAt: settlement.executedAt,
+      },
+      onChain: onChain ? { status: onChain.status, outcome: onChain.outcome, settlementRef: onChain.settlementRef } : null,
+      providerStatus,
+      reconciliationStatus,
+      chainError,
+    });
+  } catch (error) {
+    console.error("[Agreements] Get settlement error:", error);
+    res.status(500).json({ error: "Failed to fetch settlement" });
   }
 });
 

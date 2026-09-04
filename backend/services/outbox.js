@@ -191,15 +191,39 @@ async function processSubmittedRow(row, { confirmationsRequired }) {
 
   const currentBlock = await chainService.getCurrentBlock();
   const confirmations = currentBlock - receipt.blockNumber + 1;
-  const nextStatus = confirmations >= confirmationsRequired ? "CONFIRMED" : "SUBMITTED";
+  const reachedThreshold = confirmations >= confirmationsRequired;
 
-  await prisma.outbox.update({
-    where: { id: row.id },
-    data: { blockNumber: receipt.blockNumber, confirmations, status: nextStatus },
-  });
-
-  if (nextStatus === "CONFIRMED") {
-    await applyConfirmedEffect(row, receipt);
+  // The row is only marked CONFIRMED once applyConfirmedEffect has actually
+  // succeeded — never before. Marking it CONFIRMED first (the original
+  // approach) meant a throwing applyConfirmedEffect left the row stuck
+  // forever: CONFIRMED rows are never revisited (only PENDING/SUBMITTED are
+  // polled), so a real, mined, immutable on-chain transaction's effect could
+  // silently never reach the database. Real-tested: a unique-constraint
+  // collision on Agreement.onChainId reproduced exactly this — the row sat
+  // CONFIRMED with the correct txHash/confirmations while onChainId stayed
+  // null indefinitely. Keeping the row at SUBMITTED (with the error visible
+  // in lastError) means the next tick retries applyConfirmedEffect against
+  // the same already-fetched receipt until it succeeds or the underlying
+  // cause is fixed — safe to retry because it only re-derives DB state from
+  // an immutable receipt, never resubmits a transaction.
+  if (reachedThreshold) {
+    try {
+      await applyConfirmedEffect(row, receipt);
+      await prisma.outbox.update({
+        where: { id: row.id },
+        data: { blockNumber: receipt.blockNumber, confirmations, status: "CONFIRMED", lastError: null },
+      });
+    } catch (err) {
+      await prisma.outbox.update({
+        where: { id: row.id },
+        data: { blockNumber: receipt.blockNumber, confirmations, lastError: `applyConfirmedEffect failed: ${extractErrorMessage(err)}` },
+      });
+    }
+  } else {
+    await prisma.outbox.update({
+      where: { id: row.id },
+      data: { blockNumber: receipt.blockNumber, confirmations, status: "SUBMITTED" },
+    });
   }
 }
 
@@ -270,6 +294,22 @@ async function applyConfirmedEffect(row, receipt) {
     case "FINALIZE":
       await prisma.agreement.update({ where: { id: row.agreementId }, data: { status: "SETTLEMENT_AUTHORIZED" } });
       break;
+    case "GIVE_RULING": {
+      // THE GOVERNING RULE (Phase 4 Session 1, Part 3): the backend never
+      // sets the outcome itself on a ruling — it reads status/outcome back
+      // from the chain after confirmation, exactly like RECORD_VERIFICATION
+      // above.
+      const onChain = await chainService.getAgreement(payload.agreementId);
+      await prisma.agreement.update({
+        where: { id: row.agreementId },
+        data: { status: onChain.status, outcome: onChain.outcome },
+      });
+      await prisma.dispute.updateMany({
+        where: { agreementId: row.agreementId, status: "RAISED" },
+        data: { ruling: payload.ruling, status: "RULED" },
+      });
+      break;
+    }
     case "CONFIRM_SETTLEMENT":
       await prisma.agreement.update({ where: { id: row.agreementId }, data: { status: "SETTLED" } });
       await prisma.settlement.updateMany({

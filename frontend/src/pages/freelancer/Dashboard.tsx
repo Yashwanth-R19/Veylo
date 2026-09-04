@@ -1,97 +1,67 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import GlassCard from '@/components/shared/GlassCard'
 import StatusBadge from '@/components/shared/StatusBadge'
+import AmountDisplay from '@/components/shared/AmountDisplay'
 import DeadlineCountdown from '@/components/shared/DeadlineCountdown'
 import EmptyState from '@/components/shared/EmptyState'
-import SpotlightCard from '@/components/ui/SpotlightCard'
-import CountUp from '@/components/ui/CountUp'
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton'
 import AnimatedList from '@/components/ui/AnimatedList'
-import { getJobs } from '@/lib/api'
-import { formatINR } from '@/lib/utils'
-import type { Job } from '@/types'
-import { Briefcase, Coins, BarChart3, Shield, FolderCode, Search } from 'lucide-react'
+import { useContract } from '@/hooks/useContract'
+import type { AgreementRecord } from '@/types'
+import { FileText, AlertTriangle } from 'lucide-react'
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } }
-const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } } }
-
+/**
+ * Lists every agreement, same as the client view — see client/Dashboard.tsx
+ * for why there's no "mine only" filter (identity here is a wallet
+ * signature, not the app login).
+ */
 export default function FreelancerDashboard() {
-    const [jobs, setJobs] = useState<Job[]>([])
+    const [agreements, setAgreements] = useState<AgreementRecord[] | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate()
+    const { listAgreements } = useContract()
 
-    useEffect(() => { getJobs().then(setJobs) }, [])
-
-    const myJobs = jobs.filter(j => j.freelancerAddress)
-    const availableJobs = jobs.filter(j => j.state === 'FUNDED' && !j.freelancerAddress).slice(0, 3)
-    const activeCount = myJobs.filter(j => j.state !== 'CLOSED').length
-
-    const stats = [
-        { icon: Briefcase, label: 'Active Jobs', value: activeCount },
-        { icon: Coins, label: 'Total Earned', value: 120000, prefix: '₹', decimals: 0 },
-        { icon: BarChart3, label: 'Avg Score', value: 91, suffix: '%' },
-        { icon: Shield, label: 'Reputation', value: 91 },
-    ]
+    useEffect(() => {
+        listAgreements().then(setAgreements).catch((err) => setError(err instanceof Error ? err.message : 'Failed to load agreements'))
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div>
-            <h1 className="font-display font-bold text-2xl text-text-primary mb-1">Dashboard</h1>
-            <p className="text-sm text-text-muted font-body mb-8">Your freelancer overview</p>
+            <div className="mb-8">
+                <h1 className="font-display font-bold text-2xl text-text-primary">Agreements</h1>
+                <p className="text-sm text-text-muted font-body mt-1">Every agreement on this instance. Open a Draft one to accept its criteria.</p>
+            </div>
 
-            {/* Stats */}
-            <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-4 gap-4 mb-8">
-                {stats.map((s) => (
-                    <motion.div key={s.label} variants={item}>
-                        <GlassCard className="p-5">
-                            <div className="flex items-center gap-2 mb-2">
-                                <s.icon className="w-4 h-4 text-text-muted" />
-                                <span className="text-xs text-text-muted font-body">{s.label}</span>
-                            </div>
-                            <p className="text-2xl font-bold font-mono text-text-primary">
-                                <CountUp end={s.value} decimals={s.decimals || 0} suffix={s.suffix || ''} />
-                            </p>
-                        </GlassCard>
-                    </motion.div>
-                ))}
-            </motion.div>
-
-            {/* Available jobs */}
-            <h2 className="font-display font-semibold text-base text-text-primary mb-4">Available Jobs</h2>
-            {availableJobs.length === 0 ? (
-                <EmptyState icon={Search} title="No open jobs" description="Check back later for new opportunities." className="mb-8" />
-            ) : (
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                    {availableJobs.map((job, i) => (
-                        <motion.div key={job.id} variants={item} initial="hidden" animate="show" transition={{ delay: i * 0.07 }}>
-                            <SpotlightCard className="p-6 h-full cursor-pointer" onClick={() => navigate(`/freelancer/job/${job.id}`)}>
-                                <p className="text-sm font-medium text-text-primary mb-2">{job.description.slice(0, 60)}...</p>
-                                <p className="font-mono text-lg font-bold text-violet-400 mb-3">{formatINR(job.paymentAmountINR || 25000)}</p>
-                                <DeadlineCountdown deadline={job.deadline} />
-                            </SpotlightCard>
-                        </motion.div>
-                    ))}
+            {error && (
+                <div className="flex items-start gap-2 text-sm text-red-400 font-body mb-4">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {error}
                 </div>
             )}
 
-            {/* Active jobs */}
-            <h2 className="font-display font-semibold text-base text-text-primary mb-4">My Active Jobs</h2>
-            {myJobs.length === 0 ? (
-                <EmptyState icon={FolderCode} title="No active jobs" description="Browse the marketplace to find work." action={{ label: 'Browse Jobs', onClick: () => navigate('/freelancer/marketplace') }} />
-            ) : (
+            {agreements === null && !error && <LoadingSkeleton variant="card" count={4} />}
+
+            {agreements !== null && agreements.length === 0 && (
+                <EmptyState icon={FileText} title="No agreements yet" description="Ask a client to author criteria naming your wallet address as the worker." />
+            )}
+
+            {agreements !== null && agreements.length > 0 && (
                 <GlassCard className="divide-y divide-white/[0.06]">
                     <AnimatedList stagger={0.05}>
-                        {myJobs.map((job) => (
+                        {agreements.map((a) => (
                             <button
-                                key={job.id}
-                                onClick={() => navigate(`/freelancer/job/${job.id}`)}
+                                key={a.id}
+                                onClick={() => navigate(`/freelancer/agreement/${a.id}`)}
                                 className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.02] transition-colors text-left"
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium text-text-primary truncate">{job.description.slice(0, 60)}...</p>
+                                    <p className="text-sm font-medium text-text-primary">Agreement #{a.id}</p>
+                                    <p className="text-xs text-text-muted font-body mt-0.5">{a.criteriaJson.criteria.length} criteria</p>
                                 </div>
                                 <div className="flex items-center gap-4 ml-4">
-                                    <DeadlineCountdown deadline={job.deadline} />
-                                    <StatusBadge status={job.state} />
+                                    <AmountDisplay amount={Number(a.amountMinor) / 100} currency={a.currency} size="sm" />
+                                    <DeadlineCountdown deadline={a.deadline} />
+                                    <StatusBadge status={a.status} />
                                 </div>
                             </button>
                         ))}

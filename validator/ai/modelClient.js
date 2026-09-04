@@ -6,17 +6,45 @@
  * which cannot be deployed).
  *
  * Provider selection (VEYLO_BUILD_PLAN_REVISED.md Phase 3, Part A):
- *   - Groq is primary whenever GROQ_API_KEY is set — model is
+ *   - Groq is primary whenever at least one Groq key is configured — model is
  *     openai/gpt-oss-120b, NOT the plan's literal "llama-3.3-70b-versatile"
  *     (retired by Groq; see GROQ_MODEL below for the full story).
- *   - Gemini Flash is the fallback whenever GEMINI_API_KEY is set.
- *   - If only one key is present, that provider is used with no fallback.
- *   - If neither is present, generate() throws immediately — callers must
+ *   - Gemini Flash is the fallback whenever at least one Gemini key is
+ *     configured.
+ *   - If only one provider has keys, that provider is used with no fallback.
+ *   - If neither has any key, generate() throws immediately — callers must
  *     treat that as an unavailable provider (INCONCLUSIVE upstream), never
  *     substitute a fabricated response.
- *   - Failover from Groq to Gemini happens on any HTTP error response
- *     (rate limit, 5xx, etc.) or network failure — never on a successful
- *     response the caller merely dislikes.
+ *   - Failover from Groq to Gemini happens once EVERY Groq key has been
+ *     tried and failed with a retryable status (see isRetryableStatus) or a
+ *     network error — never on a successful response the caller merely
+ *     dislikes.
+ *
+ * ── Multi-key pools (Phase 3 Session 2 correction) ──────────────────────
+ * Originally this module read a single GROQ_API_KEY / GEMINI_API_KEY. The
+ * user then provisioned multiple keys per provider (6 Groq, 10 Gemini) to
+ * multiply the effective free-tier budget, via GROQ_API_KEYS /
+ * GEMINI_API_KEYS — comma-separated lists. Per explicit user decision:
+ * rotate to the next key in a provider's pool ONLY on a rate-limit/error
+ * response for the current key, not on every call (no round-robin, no
+ * random selection). The pool cursor (loadedGroqKeys/groqKeyCursor etc.
+ * below) is process-lifetime state, not per-call: once key N is known bad
+ * this run, later calls start from key N+1 instead of re-trying key 0 first.
+ *
+ * A single bad/revoked key now returns 401/403 for THAT KEY specifically,
+ * not necessarily for the whole provider — unlike the single-key design,
+ * where a 401 meant "this provider is unusable, don't retry it here."
+ * isRetryableStatus() below was widened to include 401/403 for exactly this
+ * reason: with a pool, "try the next key" is the right response to an auth
+ * error, and only once the WHOLE pool has failed with a retryable status is
+ * falling over to the other provider's pool appropriate. A genuinely
+ * malformed request (400) or a request naming a model that doesn't exist
+ * (404) is still not retried against another key — it would fail identically
+ * on every key in the pool.
+ *
+ * The singular GROQ_API_KEY / GEMINI_API_KEY env vars are still honored as a
+ * one-key pool if the plural *_KEYS var isn't set, so this is a strict
+ * superset of the original single-key behavior, not a breaking change.
  *
  * Raw REST calls, not the official SDKs (project decision: avoid two new
  * npm dependencies when Node's built-in fetch already covers this). Request/
@@ -40,16 +68,14 @@
  * GEMINI_MODEL defaults to "gemini-2.5-flash" — the plan names "Gemini
  * Flash" without a version. This default is a flagged engineering choice,
  * not a plan value: it is the most recent Flash model this session could
- * independently verify. No GEMINI_API_KEY was present in .env this session,
- * so the Gemini path is implemented per spec but has NOT been exercised
- * against a live response — reported honestly, not glossed over.
+ * independently verify.
  *
- * Budget: Groq's free tier for llama-3.3-70b-versatile is 30 RPM / 1,000
- * requests/day / 100,000 tokens/day. This module does not itself enforce a
- * quota — validator/advisory/AdvisoryValidator.js's caching (keyed on
- * commitHash+criterionIndex) and one-request-per-criterion design are what
- * keep usage inside that budget. Every call returns real measured token
- * counts so callers can report actual usage rather than an estimate.
+ * Budget: Groq's free tier for this model is 30 RPM / 1,000 requests/day /
+ * 100,000 tokens/day PER KEY. This module does not itself enforce a quota —
+ * validator/advisory/AdvisoryValidator.js's caching (keyed on a
+ * content-hash + criterionIndex, see that file) and one-request-per-criterion
+ * design are what keep usage inside budget. Every call returns real measured
+ * token counts so callers can report actual usage rather than an estimate.
  */
 
 const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
@@ -69,14 +95,65 @@ class ProviderError extends Error {
 }
 
 function isRetryableStatus(status) {
-  // 429 (rate limit) and any 5xx are treated as failover triggers; 4xx other
-  // than 429 (bad request, bad key, etc.) is not retried against a different
-  // provider — it would fail there too or mask a real bug.
-  return status === 429 || status >= 500;
+  // 401/403 (this specific key is invalid/revoked/unauthorized), 429 (rate
+  // limit), and any 5xx are all reasons to try the NEXT KEY in the pool, and
+  // — if every key in the pool is exhausted this way — to fail over to the
+  // other provider's pool. Any other 4xx (400 bad request, 404 unknown
+  // model, etc.) would fail identically on every key, so it is not retried.
+  return status === 401 || status === 403 || status === 429 || status >= 500;
 }
 
-async function callGroq(prompt, { temperature, maxTokens, json }) {
-  const apiKey = process.env.GROQ_API_KEY;
+/** Parses a provider's key pool: the plural *_KEYS var as a comma-separated
+ * list if present, else the singular *_KEY var as a one-element pool, else
+ * empty. Whitespace around each key is trimmed; empty entries are dropped. */
+function parseKeyPool(pluralVar, singularVar) {
+  const plural = process.env[pluralVar];
+  if (plural) {
+    return plural
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
+  const single = process.env[singularVar];
+  return single ? [single.trim()] : [];
+}
+
+// Process-lifetime cursors: which key index to try FIRST on the next call,
+// per provider. Only ever advanced on a retryable per-key failure (see
+// header comment) — never reset mid-process, never round-robin.
+let groqKeyCursor = 0;
+let geminiKeyCursor = 0;
+
+/**
+ * Tries each key in `keys` starting at `cursor.value`, calling `attempt(key)`
+ * for each. On success, persists the successful key's index as the new
+ * cursor (so the next call starts there, skipping keys already known bad
+ * this run) and returns its result. On a retryable failure, advances to the
+ * next key (wrapping once through the whole pool, never twice) and retries.
+ * On a non-retryable failure, throws immediately without trying other keys.
+ * Throws the last error if every key in the pool is exhausted.
+ */
+async function callWithKeyPool(keys, cursor, attempt) {
+  let lastErr;
+  for (let i = 0; i < keys.length; i++) {
+    const idx = (cursor.value + i) % keys.length;
+    try {
+      const result = await attempt(keys[idx]);
+      cursor.value = idx;
+      return result;
+    } catch (err) {
+      lastErr = err;
+      if (!(err instanceof ProviderError) || !err.retryable) throw err;
+      if (keys.length > 1) {
+        console.warn(`[modelClient] key #${idx} failed (${err.message}) — trying next key in pool.`);
+      }
+    }
+  }
+  cursor.value = 0; // whole pool exhausted this round; next process-lifetime call starts fresh
+  throw lastErr;
+}
+
+async function callGroqOnce(apiKey, prompt, { temperature, maxTokens, json }) {
   const body = {
     model: GROQ_MODEL,
     messages: [{ role: "user", content: prompt }],
@@ -122,8 +199,7 @@ async function callGroq(prompt, { temperature, maxTokens, json }) {
   };
 }
 
-async function callGemini(prompt, { temperature, maxTokens, json }) {
-  const apiKey = process.env.GEMINI_API_KEY;
+async function callGeminiOnce(apiKey, prompt, { temperature, maxTokens, json }) {
   const generationConfig = { temperature, maxOutputTokens: maxTokens };
   if (json) generationConfig.responseMimeType = "application/json";
 
@@ -178,32 +254,38 @@ async function callGemini(prompt, { temperature, maxTokens, json }) {
 async function generate(prompt, opts = {}) {
   const callOpts = { temperature: opts.temperature ?? 0, maxTokens: opts.maxTokens ?? 1024, json: opts.json ?? false };
 
-  const hasGroq = !!process.env.GROQ_API_KEY;
-  const hasGemini = !!process.env.GEMINI_API_KEY;
+  const groqKeys = parseKeyPool("GROQ_API_KEYS", "GROQ_API_KEY");
+  const geminiKeys = parseKeyPool("GEMINI_API_KEYS", "GEMINI_API_KEY");
 
-  if (!hasGroq && !hasGemini) {
-    throw new ProviderError("No LLM provider configured: set GROQ_API_KEY and/or GEMINI_API_KEY.", {
+  if (groqKeys.length === 0 && geminiKeys.length === 0) {
+    throw new ProviderError("No LLM provider configured: set GROQ_API_KEY(S) and/or GEMINI_API_KEY(S).", {
       provider: null,
       status: null,
       retryable: false,
     });
   }
 
-  if (hasGroq) {
+  if (groqKeys.length > 0) {
     try {
-      return await callGroq(prompt, callOpts);
+      const groqCursor = { value: groqKeyCursor };
+      const result = await callWithKeyPool(groqKeys, groqCursor, (key) => callGroqOnce(key, prompt, callOpts));
+      groqKeyCursor = groqCursor.value;
+      return result;
     } catch (err) {
-      if (!hasGemini || !(err instanceof ProviderError) || !err.retryable) throw err;
-      console.warn(`[modelClient] Groq failed (${err.message}) — failing over to Gemini.`);
+      if (geminiKeys.length === 0 || !(err instanceof ProviderError) || !err.retryable) throw err;
+      console.warn(`[modelClient] entire Groq key pool failed (${err.message}) — failing over to Gemini.`);
     }
   }
 
-  if (hasGemini) {
-    return await callGemini(prompt, callOpts);
+  if (geminiKeys.length > 0) {
+    const geminiCursor = { value: geminiKeyCursor };
+    const result = await callWithKeyPool(geminiKeys, geminiCursor, (key) => callGeminiOnce(key, prompt, callOpts));
+    geminiKeyCursor = geminiCursor.value;
+    return result;
   }
 
-  // hasGroq was true and its non-retryable error already threw above.
-  throw new ProviderError("Groq failed and no Gemini fallback is configured.", { provider: "groq", status: null, retryable: false });
+  // groqKeys was non-empty and its non-retryable/pool-exhausted error already threw above.
+  throw new ProviderError("Groq key pool failed and no Gemini fallback is configured.", { provider: "groq", status: null, retryable: false });
 }
 
 module.exports = { generate, ProviderError, GROQ_MODEL, GEMINI_MODEL };

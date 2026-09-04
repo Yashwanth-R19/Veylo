@@ -6,15 +6,15 @@
   "arbitrationCost": "100000000000000",
   "contracts": {
     "CentralizedArbitrator": {
-      "address": "0x7070d7B6c8baE186Aafe82d4AF8AdC9049FBD786",
-      "deployTxHash": "0x1ee6c36c689152932cc80a1975c0203aae6c060c75355cc2b207a478db1d07ae",
-      "deployBlock": 45246460
+      "address": "0x6119a1F76327d405998eAB1ad4621b8537739199",
+      "deployTxHash": "0x22bea991057c46608a6eb114312a034dd0d8d5d87ea3b4f41b2b629a99b2bcd9",
+      "deployBlock": 46694231
     },
     "VeyloAgreements": {
-      "address": "0x393a1cDF6e7801818826A04182C1B30b22413000",
-      "deployTxHash": "0x9f3a64e8662b9c52c3c14356038acc126d7ac69ceae0326fe8aedd725d22a88f",
-      "deployBlock": 45246463
+      "address": "0x4cD4505E89Cdc0D9025b7Cad40882b57598782f0",
+      "deployTxHash": "0x30dedf88a5a505320972d08206d0ce92800cce3e00f8b51ec8da37714d9078ea",
+      "deployBlock": 46694235
     }
   },
-  "deployedAt": "2026-08-18T14:55:04.397Z"
+  "deployedAt": "2026-09-04T09:04:36.225Z"
 }

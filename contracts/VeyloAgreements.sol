@@ -40,6 +40,7 @@ contract VeyloAgreements is EIP712, IArbitrable {
         bytes32 criteriaHash;
         bytes32 evidenceHash;
         bytes32 resultsHash;
+        bytes32 disputeReasonHash; // hash of the off-chain dispute reason text (Phase 4 Session 1)
         bytes32 rulingHash;
         bytes32 settlementRef;
         uint64 deadline;
@@ -76,7 +77,7 @@ contract VeyloAgreements is EIP712, IArbitrable {
     event EvidenceSubmitted(uint256 indexed agreementId, bytes32 evidenceHash);
     event VerificationRecorded(uint256 indexed agreementId, bytes32 resultsHash, Outcome automated, Status status);
     event ClientDecided(uint256 indexed agreementId, Outcome outcome);
-    event DisputeRaised(uint256 indexed agreementId, uint256 indexed disputeId);
+    event DisputeRaised(uint256 indexed agreementId, uint256 indexed disputeId, bytes32 reasonHash);
     event Ruled(uint256 indexed agreementId, uint256 indexed disputeId, uint256 ruling);
     event Finalized(uint256 indexed agreementId);
     event SettlementConfirmed(uint256 indexed agreementId, bytes32 settlementRef);
@@ -201,7 +202,14 @@ contract VeyloAgreements is EIP712, IArbitrable {
         emit ClientDecided(id, outcome);
     }
 
-    function raiseDispute(uint256 id) external payable {
+    /**
+     * @dev reasonHash is the keccak256 of the dispute's off-chain reason text
+     * (see backend/lib/canonical.js's hashCanonical, same pattern as
+     * evidenceHash). The reason text itself is never stored on-chain — only
+     * this commitment to it, so it can be verified later without trusting the
+     * backend's database alone.
+     */
+    function raiseDispute(uint256 id, bytes32 reasonHash) external payable {
         Agreement storage agreement = agreements[id];
         require(
             agreement.status == Status.VERIFIED || agreement.status == Status.NEEDS_REVIEW,
@@ -212,14 +220,16 @@ contract VeyloAgreements is EIP712, IArbitrable {
             "VeyloAgreements: caller is not a party"
         );
         require(block.timestamp < agreement.reviewWindowEnds, "VeyloAgreements: review window has ended");
+        require(reasonHash != bytes32(0), "VeyloAgreements: reasonHash is zero");
 
         agreement.status = Status.DISPUTED;
+        agreement.disputeReasonHash = reasonHash;
 
         uint256 disputeId = arbitrator.createDispute{value: msg.value}(2, "");
         agreement.disputeId = disputeId;
         disputeIdToAgreementId[disputeId] = id;
 
-        emit DisputeRaised(id, disputeId);
+        emit DisputeRaised(id, disputeId, reasonHash);
     }
 
     /// @inheritdoc IArbitrable

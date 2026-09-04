@@ -1,4 +1,7 @@
-import type { Job, User, ValidationReport, AmbiguityResult, TestSuite, ReputationProfile } from '@/types'
+import type {
+    User, AgreementRecord, CriterionDraft, VerificationBundle,
+    OutboxEntry, ChainInfo, ResultsDocument, Outcome, DisputeView, SettlementView,
+} from '@/types'
 import { API_BASE_URL } from '@/lib/constants'
 
 // ── Helpers ────────────────────────────────────────
@@ -15,127 +18,105 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     return res.json()
 }
 
-/** Normalize a job from backend shape to frontend shape */
-function normalizeJob(raw: Record<string, unknown>): Job {
-    return {
-        ...(raw as unknown as Job),
-        testSuite: (raw.testSuiteJson as TestSuite | null) ?? (raw.testSuite as TestSuite | null) ?? null,
-        testSuiteJson: (raw.testSuiteJson as TestSuite | null) ?? null,
-        validationReport: (raw.validationReport as ValidationReport | null) ?? null,
-        outcome: (raw.outcome as string) ?? 'NONE',
-        paymentAmountINR: (raw.paymentAmountINR as number | null) ?? null,
-        validatedAt: (raw.validatedAt as string | null) ?? null,
-        closedAt: (raw.closedAt as string | null) ?? null,
-        fundTxHash: (raw.fundTxHash as string | null) ?? null,
-        validateTxHash: (raw.validateTxHash as string | null) ?? null,
-    }
+function normalizeAgreement(raw: Record<string, unknown>): AgreementRecord {
+    return raw as unknown as AgreementRecord
 }
 
-// ── Jobs ───────────────────────────────────────────
-export async function createJob(data: {
-    title?: string
-    description: string
-    clientAddress: string
-    deadline?: string
-    testSuite?: TestSuite
-    paymentAmountINR?: number
-    requirementsHash?: string
-    testSuiteHash?: string
-    techStack?: string
-    expectedDeliverable?: string
-}): Promise<Job> {
-    const raw = await apiFetch<Record<string, unknown>>('/jobs', {
+// ── Chain config ───────────────────────────────────
+export async function getChainInfo(): Promise<ChainInfo> {
+    return apiFetch<ChainInfo>('/chain-info')
+}
+
+// ── Criteria drafting assistant (Phase 3, Part D) ──
+export async function draftCriteria(description: string): Promise<{ criteria: CriterionDraft[]; provider: string; tokens: unknown }> {
+    return apiFetch('/criteria/draft', {
+        method: 'POST',
+        body: JSON.stringify({ description }),
+    })
+}
+
+// ── Agreements ─────────────────────────────────────
+export async function createAgreement(data: {
+    workerAddress: string
+    amountMinor: string
+    currency: string
+    criteria: CriterionDraft[]
+    deadline: number
+    nonce: string
+    clientSig: string
+}): Promise<{ agreement: AgreementRecord; outboxRowId: number }> {
+    const raw = await apiFetch<{ agreement: Record<string, unknown>; outboxRowId: number }>('/agreements', {
         method: 'POST',
         body: JSON.stringify(data),
     })
-    return normalizeJob(raw)
+    return { agreement: normalizeAgreement(raw.agreement), outboxRowId: raw.outboxRowId }
 }
 
-export async function fundJob(jobId: number): Promise<{ success: boolean }> {
-    await apiFetch(`/jobs/${jobId}/fund`, { method: 'POST' })
-    return { success: true }
-}
-
-export async function getJobs(state?: string): Promise<Job[]> {
-    const query = state ? `?state=${state}` : ''
-    const raw = await apiFetch<Record<string, unknown>[]>(`/jobs${query}`)
-    return raw.map(normalizeJob)
-}
-
-export async function getJobById(id: number): Promise<Job> {
-    const raw = await apiFetch<Record<string, unknown>>(`/jobs/${id}`)
-    const job = normalizeJob(raw)
-
-    // If job has been validated, fetch the report separately
-    if (job.state === 'VALIDATED' && !job.validationReport) {
-        try {
-            const report = await apiFetch<ValidationReport>(`/validation/${id}`)
-            job.validationReport = report
-        } catch {
-            // No report available yet
-        }
-    }
-
-    return job
-}
-
-export async function acceptJob(jobId: number, freelancerAddress: string): Promise<{ success: boolean }> {
-    await apiFetch(`/jobs/${jobId}/accept`, {
-        method: 'PUT',
-        body: JSON.stringify({ freelancerAddress }),
-    })
-    return { success: true }
-}
-
-// ── Submission ─────────────────────────────────────
-export async function submitWork(jobId: number, repoUrl: string): Promise<{ success: boolean }> {
-    await apiFetch(`/jobs/${jobId}/submit`, {
+export async function acceptCriteria(agreementId: number, nonce: string, workerSig: string): Promise<{ outboxRowId: number }> {
+    return apiFetch(`/agreements/${agreementId}/accept`, {
         method: 'POST',
-        body: JSON.stringify({ repoUrl }),
+        body: JSON.stringify({ nonce, workerSig }),
     })
-    return { success: true }
 }
 
-// ── Validation ─────────────────────────────────────
-export async function runValidation(jobId: number): Promise<{ started: boolean }> {
-    await apiFetch('/validation/run', {
+export async function submitEvidence(agreementId: number, repoUrl: string, commitHash: string): Promise<{ outboxRowId: number; evidenceHash: string }> {
+    return apiFetch(`/agreements/${agreementId}/evidence`, {
         method: 'POST',
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({ repoUrl, commitHash }),
     })
-    return { started: true }
 }
 
-export async function getValidation(jobId: number): Promise<ValidationReport | null> {
-    try {
-        return await apiFetch<ValidationReport>(`/validation/${jobId}`)
-    } catch {
-        return null
-    }
+export async function runVerification(agreementId: number): Promise<{
+    outboxRowId: number
+    resultsHash: string
+    deterministicHash: string
+    outcome: Outcome
+    results: ResultsDocument
+    advisoryStats: unknown
+}> {
+    return apiFetch(`/agreements/${agreementId}/verify`, { method: 'POST' })
 }
 
-export async function generateTests(description: string): Promise<TestSuite> {
-    const result = await apiFetch<{ testSuite: TestSuite }>('/validation/generate-tests', {
+export async function decideAgreement(agreementId: number, outcome: 'ACCEPT' | 'REJECT'): Promise<{ outboxRowId: number }> {
+    return apiFetch(`/agreements/${agreementId}/decide`, {
         method: 'POST',
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ outcome }),
     })
-    return result.testSuite
 }
 
-export async function checkAmbiguity(description: string): Promise<AmbiguityResult> {
-    return apiFetch<AmbiguityResult>('/validation/check-ambiguity', {
+export async function raiseDispute(agreementId: number, party: 'client' | 'worker', reason?: string): Promise<{ outboxRowId: number }> {
+    return apiFetch(`/agreements/${agreementId}/dispute`, {
         method: 'POST',
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ party, reason }),
     })
 }
 
-// ── Reputation ─────────────────────────────────────
-export async function getReputation(address: string): Promise<ReputationProfile> {
-    return apiFetch<ReputationProfile>(`/reputation/${address}`)
+export async function finalizeAgreement(agreementId: number): Promise<{ outboxRowId: number }> {
+    return apiFetch(`/agreements/${agreementId}/finalize`, { method: 'POST' })
 }
 
-export async function getReputationBadges(address: string): Promise<string[]> {
-    const result = await apiFetch<{ badges: string[] }>(`/reputation/${address}/badges`)
-    return result.badges
+export async function getDispute(agreementId: number): Promise<DisputeView> {
+    return apiFetch(`/agreements/${agreementId}/dispute`)
+}
+
+export async function getSettlement(agreementId: number): Promise<SettlementView> {
+    return apiFetch(`/agreements/${agreementId}/settlement`)
+}
+
+// Reading an agreement (DB + on-chain state) goes through the useContract()
+// hook (hooks/useContract.ts), not this module — it already fetches
+// /agreements and /agreements/:id and returns them typed against the same
+// AgreementView shape, and duplicating that here would just be a second
+// source of truth for the same two GET calls.
+
+// ── Verification bundle (independent verification) ─
+export async function getVerificationBundle(agreementId: number): Promise<VerificationBundle> {
+    return apiFetch(`/verify/${agreementId}`)
+}
+
+// ── Chain panel (outbox transaction history) ───────
+export async function getOutboxEntries(agreementId: number): Promise<OutboxEntry[]> {
+    return apiFetch(`/outbox/agreement/${agreementId}`)
 }
 
 // ── Auth API ──────────────────────────────────────────

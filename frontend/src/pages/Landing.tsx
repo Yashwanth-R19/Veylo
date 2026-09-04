@@ -4,42 +4,33 @@ import Aurora from '@/components/ui/Aurora'
 import BlurText from '@/components/ui/BlurText'
 import ScrollReveal from '@/components/ui/ScrollReveal'
 import SpotlightCard from '@/components/ui/SpotlightCard'
-import CountUp from '@/components/ui/CountUp'
-import { ArrowRight, ShieldCheck, Link2, Zap, ClipboardCheck, FlaskConical, Lock, Hammer, ScanSearch, CircleDollarSign, Github } from 'lucide-react'
-import { SCORE_WEIGHTS } from '@/lib/constants'
+import { ArrowRight, ShieldCheck, Link2, GitBranch, ClipboardCheck, PenTool, Upload, CheckCircle2, Scale, Github } from 'lucide-react'
 
 const steps = [
-    { num: '01', title: 'Define Requirements', desc: 'AI flags ambiguous language before you lock anything.', icon: ClipboardCheck },
-    { num: '02', title: 'Generate Test Suite', desc: 'Requirements become executable, auditable validation criteria.', icon: FlaskConical },
-    { num: '03', title: 'Lock and Fund', desc: 'Both hashes stored on-chain. Escrow funded. Nothing changes now.', icon: Lock },
-    { num: '04', title: 'Build and Submit', desc: 'Freelancer sees the exact tests. Submits a repo URL.', icon: Hammer },
-    { num: '05', title: 'Validate', desc: 'Four layers run in a sandboxed environment. A score is computed.', icon: ScanSearch },
-    { num: '06', title: 'Settle', desc: 'Score above threshold — payment auto-released. Below — refund triggered.', icon: CircleDollarSign },
+    { num: '01', title: 'Author Criteria', desc: 'Client defines machine-checkable criteria, DETERMINISTIC or SEMANTIC. An AI assistant flags ambiguous ones.', icon: ClipboardCheck },
+    { num: '02', title: 'Sign', desc: 'Client and worker each sign the criteria hash with their own wallet key. Neither pays gas.', icon: PenTool },
+    { num: '03', title: 'Submit Evidence', desc: 'Worker submits a repo and commit. Nothing about the criteria can change now.', icon: Upload },
+    { num: '04', title: 'Verify', desc: 'Deterministic checks run in an isolated sandbox and decide the outcome. An AI layer adds advisory evidence — it cannot vote.', icon: CheckCircle2 },
+    { num: '05', title: 'Review Window', desc: 'Either party can dispute within the window. An arbitrator rules if they do.', icon: Scale },
+    { num: '06', title: 'Settle', desc: 'The chain authorizes settlement; a payment provider executes it exactly once.', icon: GitBranch },
 ]
 
 const differentiators = [
     {
         icon: ShieldCheck,
         title: 'Deterministic Outcome',
-        text: 'Validation runs across execution, repo viability, static analysis, and AI reasoning. The score is a weighted formula, not a judgment.',
+        text: 'Acceptance is decided by per-criterion checks that produce the same result for the same commit — never a discretionary score.',
     },
     {
         icon: Link2,
-        title: 'Immutable Agreement',
-        text: 'Requirements and test criteria are hashed on-chain at job creation. Nothing can be changed retroactively.',
+        title: 'Tamper-Evident Record',
+        text: 'The criteria hash and both signatures are committed on-chain. Retroactive edits are detectable, not prevented from being attempted.',
     },
     {
-        icon: Zap,
-        title: 'Trustless Settlement',
-        text: 'The smart contract holds funds and releases them based solely on the validation score. Neither party controls the outcome.',
+        icon: GitBranch,
+        title: 'AI Bounded to Advisory',
+        text: 'A semantic criterion can route an outcome to human review — it can never itself produce ACCEPT or REJECT.',
     },
-]
-
-const layers = [
-    { label: 'Execution', weight: SCORE_WEIGHTS.execution, color: 'bg-emerald-500' },
-    { label: 'Repo Viability', weight: SCORE_WEIGHTS.repoViability, color: 'bg-violet-500' },
-    { label: 'Lint', weight: SCORE_WEIGHTS.lint, color: 'bg-amber-500' },
-    { label: 'Semantic', weight: SCORE_WEIGHTS.semantic, color: 'bg-blue-500' },
 ]
 
 export default function Landing() {
@@ -51,10 +42,10 @@ export default function Landing() {
             {/* Hero */}
             <section className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16">
                 <h1 className="font-display font-extrabold text-5xl md:text-[56px] leading-tight text-text-primary mb-5 max-w-3xl">
-                    <BlurText text="Autonomous Freelance Contracts" stagger={0.05} />
+                    <BlurText text="Verifiable Acceptance for Software Deliverables" stagger={0.05} />
                 </h1>
                 <p className="text-lg text-text-secondary max-w-xl mb-8 font-body">
-                    Requirements locked. Validation automated. Payment released by math.
+                    Criteria signed before work begins. Acceptance decided by reproducible checks, not a discretionary score.
                 </p>
                 <div className="flex items-center gap-4">
                     <Link
@@ -67,7 +58,7 @@ export default function Landing() {
                         to="/auth"
                         className="px-6 py-3 rounded-lg border border-white/[0.11] text-text-secondary hover:text-text-primary hover:bg-white/[0.04] font-medium transition-all"
                     >
-                        Start as Freelancer
+                        Start as Worker
                     </Link>
                 </div>
             </section>
@@ -76,7 +67,7 @@ export default function Landing() {
             <section className="relative z-10 max-w-6xl mx-auto px-6 py-24">
                 <ScrollReveal>
                     <h2 className="font-display font-bold text-3xl text-text-primary text-center mb-3">How it Works</h2>
-                    <p className="text-text-secondary text-center mb-14 font-body">Six steps. Fully autonomous.</p>
+                    <p className="text-text-secondary text-center mb-14 font-body">Six steps, end to end.</p>
                 </ScrollReveal>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {steps.map((step, i) => (
@@ -102,7 +93,7 @@ export default function Landing() {
             <section className="relative z-10 max-w-6xl mx-auto px-6 py-24">
                 <ScrollReveal>
                     <h2 className="font-display font-bold text-3xl text-text-primary text-center mb-3">Why Veylo</h2>
-                    <p className="text-text-secondary text-center mb-14 font-body">Built differently from the ground up.</p>
+                    <p className="text-text-secondary text-center mb-14 font-body">What the architecture actually guarantees — see the README for the full trust model.</p>
                 </ScrollReveal>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {differentiators.map((d, i) => (
@@ -117,38 +108,17 @@ export default function Landing() {
                 </div>
             </section>
 
-            {/* Scoring */}
+            {/* Trust model teaser */}
             <section className="relative z-10 max-w-3xl mx-auto px-6 py-24">
                 <ScrollReveal>
-                    <h2 className="font-display font-bold text-3xl text-text-primary text-center mb-3">Transparent Scoring</h2>
-                    <p className="text-text-secondary text-center mb-10 font-body">Every score is a weighted composition of four validation layers.</p>
-                </ScrollReveal>
-                <ScrollReveal delay={0.15}>
-                    <div className="glass p-7">
-                        <p className="font-mono text-sm text-text-secondary mb-6 text-center leading-relaxed">
-                            Final = 0.50 &times; Execution + 0.10 &times; Repo Viability + 0.20 &times; Lint + 0.20 &times; Semantic
+                    <div className="glass p-7 text-center space-y-3">
+                        <h2 className="font-display font-bold text-2xl text-text-primary">The trust model, plainly</h2>
+                        <p className="text-sm text-text-secondary font-body leading-relaxed">
+                            The client and worker sign with their own keys — those are the parties who actually disagree.
+                            The validator key belongs to the operator: it buys non-retroactivity, not honesty at write
+                            time. The arbitrator is also the operator. Full detail is in the README, not hidden in a
+                            footnote.
                         </p>
-                        <div className="space-y-3 mb-6">
-                            {layers.map((l, i) => (
-                                <div key={l.label} className="flex items-center gap-3">
-                                    <span className="text-xs text-text-secondary font-body w-20 text-right">{l.label}</span>
-                                    <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full ${l.color}`}
-                                            style={{ width: `${l.weight * 250}%`, transition: 'width 1s' }}
-                                        />
-                                    </div>
-                                    <span className="font-mono text-xs text-text-secondary w-10">
-                                        <CountUp end={l.weight * 100} suffix="%" delay={i * 100} />
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex items-center justify-between text-xs font-body">
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Pass: 75+</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Review: 50–74</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> Fail: Below 50</span>
-                        </div>
                     </div>
                 </ScrollReveal>
             </section>
@@ -156,7 +126,7 @@ export default function Landing() {
             {/* Footer */}
             <footer className="relative z-10 border-t border-white/[0.06] py-8 px-6">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
-                    <p className="text-xs text-text-muted font-body">Veylo — Trustless payment verification for remote work.</p>
+                    <p className="text-xs text-text-muted font-body">Veylo — verifiable acceptance for software deliverables.</p>
                     <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-text-muted hover:text-text-secondary transition-colors">
                         <Github className="w-4 h-4" />
                     </a>

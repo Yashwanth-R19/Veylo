@@ -1,0 +1,53 @@
+# Render Blueprint for the Veylo backend.
+# https://render.com/docs/blueprint-spec
+#
+# This describes the SERVICE only — every value below is a name, not a
+# secret. Real values (API keys, private keys, the Neon connection string)
+# are entered in Render's dashboard after import, never committed here.
+#
+# Free tier: sleeps after 15 minutes idle, ~1 minute cold start, 0.1 CPU,
+# 750 instance-hours/month. The outbox and settlement workers are built to
+# run opportunistically on request as well as on an interval specifically
+# because this service cannot assume the process stays alive — see
+# docs/ARCHITECTURE.md §4/§5.
+services:
+  - type: web
+    name: veylo-backend
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Set for real in the Render dashboard, not here:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ALCHEMY_AMOY_URL
+        sync: false
+      - key: DEPLOYER_PRIVATE_KEY
+        sync: false
+      - key: VALIDATOR_PRIVATE_KEY
+        sync: false
+      - key: TEST_CLIENT_PRIVATE_KEY
+        sync: false
+      - key: TEST_WORKER_PRIVATE_KEY
+        sync: false
+      - key: E2B_API_KEY
+        sync: false
+      - key: GROQ_API_KEYS
+        sync: false
+      - key: GEMINI_API_KEYS
+        sync: false
+      # The deployed Vercel frontend origin — allows it to call this API
+      # directly (cross-origin) as a fallback path outside the Vercel
+      # rewrite proxy (frontend/vercel.json). e.g. https://veylo.vercel.app
+      - key: FRONTEND_URL
+        sync: false

@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { cn, formatHash, copyToClipboard } from '@/lib/utils'
 import { Copy, Check, ExternalLink } from 'lucide-react'
-import { ETHERSCAN_BASE } from '@/lib/constants'
 
 interface HashDisplayProps {
     hash: string
     label?: string
-    link?: boolean
+    /** Amoy explorer base (from GET /api/chain-info) plus the tx/address path segment to link to, e.g. `${blockExplorerBase}/tx` or `${blockExplorerBase}/address`. Omit to render without a link. */
+    explorerUrl?: string
     className?: string
 }
 
-export default function HashDisplay({ hash, label, link = false, className }: HashDisplayProps) {
+export default function HashDisplay({ hash, label, explorerUrl, className }: HashDisplayProps) {
     const [copied, setCopied] = useState(false)
 
     const handleCopy = async () => {
@@ -26,9 +26,9 @@ export default function HashDisplay({ hash, label, link = false, className }: Ha
             <button onClick={handleCopy} className="text-text-muted hover:text-text-secondary transition-colors">
                 {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
             </button>
-            {link && (
+            {explorerUrl && (
                 <a
-                    href={`${ETHERSCAN_BASE}/tx/${hash}`}
+                    href={`${explorerUrl}/${hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-text-muted hover:text-violet-400 transition-colors"

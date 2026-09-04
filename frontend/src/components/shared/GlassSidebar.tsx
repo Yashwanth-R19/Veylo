@@ -4,22 +4,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { useApp } from '@/context/AppContext'
 import { cn } from '@/lib/utils'
 import {
-    LayoutDashboard, PlusCircle, FolderOpen, Shield,
-    Search, FolderCode, ChevronLeft, LogOut, User,
+    PlusCircle, FolderOpen, ChevronLeft, LogOut, User,
 } from 'lucide-react'
 
 const clientNav = [
-    { to: '/client', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/client/create', icon: PlusCircle, label: 'Create Job' },
-    { to: '/client', icon: FolderOpen, label: 'My Jobs' },
-    { to: '/client/reputation', icon: Shield, label: 'Reputation' },
+    { to: '/client', icon: FolderOpen, label: 'Agreements', end: true },
+    { to: '/client/create', icon: PlusCircle, label: 'Author Criteria' },
 ]
 
 const freelancerNav = [
-    { to: '/freelancer', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { to: '/freelancer/marketplace', icon: Search, label: 'Browse Jobs' },
-    { to: '/freelancer', icon: FolderCode, label: 'My Jobs' },
-    { to: '/freelancer/reputation', icon: Shield, label: 'Reputation' },
+    { to: '/freelancer', icon: FolderOpen, label: 'Agreements', end: true },
 ]
 
 export default function GlassSidebar() {

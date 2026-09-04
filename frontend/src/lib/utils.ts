@@ -1,5 +1,3 @@
-import type { JobState } from '@/types'
-
 export function cn(...classes: (string | false | null | undefined)[]): string {
     return classes.filter(Boolean).join(' ')
 }
@@ -14,20 +12,19 @@ export function formatHash(hash: string, start = 6, end = 4): string {
     return `${hash.slice(0, start + 2)}...${hash.slice(-end)}`
 }
 
-export function formatINR(amount: string | number): string {
+export function formatCurrency(amount: string | number, currency = 'USD'): string {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₹0'
-    return `₹${num.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-}
-
-/** @deprecated Use formatINR instead */
-export function formatEth(amount: string | number): string {
-    return formatINR(amount)
-}
-
-/** @deprecated Use formatINR instead */
-export function formatUsd(): string {
-    return ''
+    if (isNaN(num)) return currency === 'INR' ? '₹0' : `${currency} 0`
+    try {
+        return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 0,
+        }).format(num)
+    } catch {
+        // Intl throws on an unrecognized ISO 4217 code — fall back rather than crash the page.
+        return `${currency} ${num.toLocaleString()}`
+    }
 }
 
 export function formatDate(dateStr: string | null): string {
@@ -36,6 +33,17 @@ export function formatDate(dateStr: string | null): string {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
+    })
+}
+
+export function formatDateTime(dateStr: string | null): string {
+    if (!dateStr) return '—'
+    return new Date(dateStr).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     })
 }
 
@@ -66,49 +74,13 @@ export function formatDuration(ms: number): string {
     return `${seconds}s`
 }
 
-export function getStatusColor(state: JobState): string {
-    const colors: Record<JobState, string> = {
-        CREATED: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-        FUNDED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-        WORK_SUBMITTED: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-        VALIDATED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-        CLOSED: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-    }
-    return colors[state]
-}
-
-export function getVerdictColor(verdict: string): string {
-    const colors: Record<string, string> = {
-        PASS: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-        FAIL: 'bg-red-500/15 text-red-400 border-red-500/25',
-        DISPUTE: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-        PAID: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-        REFUNDED: 'bg-red-500/15 text-red-400 border-red-500/25',
-        DISPUTED: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-    }
-    return colors[verdict] || ''
-}
-
-export function getScoreColor(score: number): 'green' | 'amber' | 'red' {
-    if (score >= 75) return 'green'
-    if (score >= 50) return 'amber'
-    return 'red'
-}
-
-export function getScoreColorClass(score: number): string {
-    const color = getScoreColor(score)
-    return color === 'green' ? 'text-emerald-400' : color === 'amber' ? 'text-amber-400' : 'text-red-400'
-}
-
-export function getScoreBarClass(score: number): string {
-    const color = getScoreColor(score)
-    return color === 'green'
-        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-        : color === 'amber'
-            ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-            : 'bg-gradient-to-r from-red-500 to-red-400'
-}
-
 export function copyToClipboard(text: string): Promise<void> {
     return navigator.clipboard.writeText(text)
+}
+
+/** A random 128-bit nonce (decimal string) for EIP-712 replay protection — no "next nonce" endpoint exists, and the contract only needs each (signer, nonce) pair used once, so a random value is sufficient. */
+export function randomNonce(): string {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
+    return BigInt('0x' + hex).toString()
 }

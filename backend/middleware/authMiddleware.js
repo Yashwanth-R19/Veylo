@@ -7,7 +7,15 @@
 
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "veylo-dev-secret-change-in-production";
+// No hardcoded fallback — a silent default secret here would be the exact
+// same class of issue as the hardcoded Hardhat private key previously found
+// in backend/services/escrowService.js (see docs/EVALUATION.md / the
+// security audit): anyone reading this public repo could forge a valid
+// session token for any user against a deployment that forgot to set this.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required and not set.");
+}
 
 /**
  * Middleware: require authentication.

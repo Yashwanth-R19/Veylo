@@ -11,13 +11,10 @@ import GlassSidebar from '@/components/shared/GlassSidebar'
 const Landing = lazy(() => import('@/pages/Landing'))
 const Auth = lazy(() => import('@/pages/Auth'))
 const ClientDashboard = lazy(() => import('@/pages/client/Dashboard'))
-const CreateJob = lazy(() => import('@/pages/client/CreateJob'))
-const ClientJobDetail = lazy(() => import('@/pages/client/JobDetail'))
-const ValidationView = lazy(() => import('@/pages/client/ValidationView'))
+const AuthorCriteria = lazy(() => import('@/pages/client/AuthorCriteria'))
 const FreelancerDashboard = lazy(() => import('@/pages/freelancer/Dashboard'))
-const Marketplace = lazy(() => import('@/pages/freelancer/Marketplace'))
-const FreelancerJobDetail = lazy(() => import('@/pages/freelancer/JobDetail'))
-const Reputation = lazy(() => import('@/pages/Reputation'))
+const AgreementDetail = lazy(() => import('@/pages/agreements/AgreementDetail'))
+const AcceptAgreement = lazy(() => import('@/pages/agreements/AcceptAgreement'))
 
 /** Protected route — redirects to /auth if not logged in */
 function ProtectedRoute() {
@@ -78,27 +75,31 @@ export default function App() {
               {/* Public */}
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/reputation/:address" element={<Reputation />} />
 
               {/* Protected — Client */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<DashboardLayout />}>
                   <Route path="/client" element={<ClientDashboard />} />
-                  <Route path="/client/create" element={<CreateJob />} />
-                  <Route path="/client/job/:id" element={<ClientJobDetail />} />
-                  <Route path="/client/job/:id/validation" element={<ValidationView />} />
-                  <Route path="/client/reputation" element={<Reputation />} />
+                  <Route path="/client/create" element={<AuthorCriteria />} />
+                  <Route path="/client/agreement/:id" element={<AgreementDetail />} />
                 </Route>
               </Route>
 
-              {/* Protected — Freelancer */}
+              {/* Protected — Freelancer (worker) */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<DashboardLayout />}>
                   <Route path="/freelancer" element={<FreelancerDashboard />} />
-                  <Route path="/freelancer/marketplace" element={<Marketplace />} />
-                  <Route path="/freelancer/job/:id" element={<FreelancerJobDetail />} />
-                  <Route path="/freelancer/job/:id/validation" element={<ValidationView />} />
-                  <Route path="/freelancer/reputation" element={<Reputation />} />
+                  <Route path="/freelancer/agreement/:id" element={<AgreementDetail />} />
+                </Route>
+              </Route>
+
+              {/* Signing is identity-by-wallet-signature, not app role, so it
+                  lives outside the /client and /freelancer prefixes. Still
+                  behind login so a stranger can't spend the app's session,
+                  but reachable by either role. */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<DashboardLayout />}>
+                  <Route path="/agreements/:id/accept" element={<AcceptAgreement />} />
                 </Route>
               </Route>
             </Routes>
