@@ -21,14 +21,24 @@ port with one implementation, `SimulatedProvider` — no real money moves
 anywhere in this build. A `RazorpayProvider` implementing the same port
 would replace it for real settlement.
 
-**Condition before starting:** confirm Razorpay Route is actually enabled on
-a test account. Render's free tier sleeps after 15 minutes idle, which makes
-webhook-based payment confirmation unreliable — a webhook delivered to a
-sleeping instance can be silently dropped or delayed, which is a real-money
-failure mode this project has not built or tested a mitigation for. If Route
-isn't available, or the webhook-reliability problem isn't solved first, the
-correct outcome is to keep `SimulatedProvider` and say so — not to ship an
-untested integration against real funds.
+**Attempted 2026-09-05, found blocked — see `docs/CURRENT_STATE.md`'s Phase 6
+entry.** Razorpay's Dashboard (Test Mode) does not list Route as an option on
+this account at all. Confirmed against Razorpay's own current docs: Route was
+discontinued for accounts that don't meet a new eligibility bar, effective
+January 1, 2026 ([Route | FAQs | Razorpay
+Docs](https://razorpay.com/docs/payments/route/faqs/?preferred-country=IN)).
+
+**Condition before starting (updated, real bar as of 2026-09-05):**
+domestic turnover exceeding ₹40 Lakhs, or export turnover exceeding ₹5 Lakhs,
+in FY25 or FY26, plus confirmation that the linked account directly
+interfaces with the customer for goods/services — then reapply and wait
+5–7 business days for review. Separately, and still unresolved even if Route
+access is regained: Render's free tier sleeps after 15 minutes idle, which
+makes webhook-based payment confirmation unreliable — a webhook delivered to
+a sleeping instance can be silently dropped or delayed, a real-money failure
+mode this project has not built or tested a mitigation for. Both conditions
+must hold before starting — not just Route access — or the correct outcome
+is, again, to keep `SimulatedProvider` and say so.
 
 ### A second validator/deliverable type
 
