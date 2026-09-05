@@ -10,6 +10,7 @@ import { buildDomain, CRITERIA_COMMITMENT_TYPES } from '@/lib/eip712'
 import { randomNonce, cn } from '@/lib/utils'
 import type { CriterionDraft, CriterionMethod, CheckKind, ChainInfo } from '@/types'
 import { Sparkles, Plus, Trash2, AlertTriangle, Loader2, Lock } from 'lucide-react'
+import StepIndicator from '@/reactbits/StepIndicator'
 
 const CHECK_KINDS: { value: CheckKind; label: string }[] = [
     { value: 'file_exists', label: 'File exists' },
@@ -213,6 +214,9 @@ export default function AuthorCriteria() {
         }
         return (
             <div className="max-w-lg mx-auto space-y-4">
+                <div className="flex justify-center pb-2">
+                    <StepIndicator steps={['Build', 'Sign']} currentStep={2} />
+                </div>
                 <button onClick={() => setStep('build')} className="text-xs text-text-muted hover:text-text font-body">&larr; Back to criteria</button>
                 <SignPanel
                     heading="Sign to create this agreement"
@@ -242,6 +246,9 @@ export default function AuthorCriteria() {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
+            <div className="flex justify-center">
+                <StepIndicator steps={['Build', 'Sign']} currentStep={1} />
+            </div>
             <div>
                 <h1 className="font-display font-semibold text-2xl text-text-heading">Author Criteria</h1>
                 <p className="text-sm text-text-muted font-body mt-1">Define exactly what acceptance means before any work begins.</p>

@@ -32,7 +32,7 @@
   --color-info: #4E7FB0;
   --color-info-bg: rgba(78, 127, 176, 0.15);
 
-  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-display: 'Inter Variable', 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-body: 'Inter Variable', 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -152,6 +152,7 @@
   h4 {
     font-family: var(--font-display);
     font-weight: 600;
+    letter-spacing: -0.02em;
     color: var(--color-text-heading);
     line-height: var(--leading-tight);
     margin: 0;

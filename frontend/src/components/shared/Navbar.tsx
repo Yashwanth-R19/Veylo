@@ -20,7 +20,7 @@ export default function Navbar() {
                 scrolled ? 'nav-surface' : 'bg-transparent',
             )}
         >
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="w-full px-4 h-16 flex items-center justify-between">
                 <Link to="/" className="font-display font-bold text-xl tracking-tight text-text-heading">
                     <span className="text-accent">V</span>eylo
                 </Link>

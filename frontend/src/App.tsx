@@ -40,7 +40,7 @@ function DashboardLayout() {
   return (
     <div className="min-h-screen bg-bg">
       <Sidebar />
-      <main className="relative z-10 ml-[260px] p-8">
+      <main className="relative z-10 ml-[260px] px-4 py-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

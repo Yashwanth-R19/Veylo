@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import Card from '@/components/shared/Card'
+import ScrollReveal from '@/components/ui/ScrollReveal'
 import HashDisplay from '@/components/shared/HashDisplay'
 import StatusBadge from '@/components/shared/StatusBadge'
 import AmountDisplay from '@/components/shared/AmountDisplay'
@@ -52,6 +54,7 @@ function buildStages(status: AgreementStatus): PipelineStage[] {
 export default function AgreementDetail() {
     const { id } = useParams<{ id: string }>()
     const { getAgreement } = useContract()
+    const reduceMotion = useReducedMotion()
     const [agreement, setAgreement] = useState<AgreementView | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [actionBusy, setActionBusy] = useState(false)
@@ -93,8 +96,14 @@ export default function AgreementDetail() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <motion.div
+            className="w-full space-y-6"
+            initial={reduceMotion ? false : { opacity: 0, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+        >
             {/* Header */}
+            <ScrollReveal staggerIndex={0}>
             <Card className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                     <div>
@@ -144,8 +153,10 @@ export default function AgreementDetail() {
                     </div>
                 )}
             </Card>
+            </ScrollReveal>
 
             {/* Progress trail */}
+            <ScrollReveal staggerIndex={1}>
             <Card className="p-6">
                 <h2 className="font-display font-semibold text-sm text-text-heading flex items-center gap-2 mb-4">
                     <GitBranch className="w-4 h-4 text-accent" /> Progress
@@ -154,8 +165,10 @@ export default function AgreementDetail() {
                     <PipelineStageRow key={s.id} stage={s} isActive={s.status === 'running'} isLast={i === stages.length - 1} index={i} />
                 ))}
             </Card>
+            </ScrollReveal>
 
             {/* Actions per current state */}
+            <ScrollReveal staggerIndex={2}>
             <Card className="p-6 space-y-3">
                 <h2 className="font-display font-semibold text-sm text-text-heading">Actions</h2>
                 {actionError && <p className="text-xs text-danger font-body">{actionError}</p>}
@@ -240,28 +253,37 @@ export default function AgreementDetail() {
                     <p className="text-xs text-text-muted font-body">This agreement was cancelled while in Draft.</p>
                 )}
             </Card>
+            </ScrollReveal>
 
             {/* Dispute — visible once an outcome exists; raising is only enabled from VERIFIED/NEEDS_REVIEW, within the window */}
             {['VERIFIED', 'NEEDS_REVIEW', 'DISPUTED', 'RULED', 'SETTLEMENT_AUTHORIZED', 'SETTLED'].includes(database.status) && (
-                <DisputePanel
-                    agreementId={database.id}
-                    canRaise={
-                        ['VERIFIED', 'NEEDS_REVIEW'].includes(database.status) &&
-                        (!database.reviewWindowEnds || new Date(database.reviewWindowEnds).getTime() > Date.now())
-                    }
-                />
+                <ScrollReveal staggerIndex={3}>
+                    <DisputePanel
+                        agreementId={database.id}
+                        canRaise={
+                            ['VERIFIED', 'NEEDS_REVIEW'].includes(database.status) &&
+                            (!database.reviewWindowEnds || new Date(database.reviewWindowEnds).getTime() > Date.now())
+                        }
+                    />
+                </ScrollReveal>
             )}
 
             {/* Settlement — only once finalize has authorized it */}
             {['SETTLEMENT_AUTHORIZED', 'SETTLED'].includes(database.status) && (
-                <SettlementPanel agreementId={database.id} />
+                <ScrollReveal staggerIndex={4}>
+                    <SettlementPanel agreementId={database.id} />
+                </ScrollReveal>
             )}
 
             {/* Verification result + reproducibility */}
-            <VerificationResult agreementId={database.id} />
+            <ScrollReveal staggerIndex={5}>
+                <VerificationResult agreementId={database.id} />
+            </ScrollReveal>
 
             {/* Chain panel */}
-            <ChainPanel agreementId={database.id} />
-        </div>
+            <ScrollReveal staggerIndex={6}>
+                <ChainPanel agreementId={database.id} />
+            </ScrollReveal>
+        </motion.div>
     )
 }
